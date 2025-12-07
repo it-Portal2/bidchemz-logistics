@@ -1,0 +1,637 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  TRADER
+  LOGISTICS_PARTNER
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+enum HazardClass {
+  NON_HAZARDOUS
+  CLASS_1
+  CLASS_2
+  CLASS_3
+  CLASS_4
+  CLASS_5
+  CLASS_6
+  CLASS_7
+  CLASS_8
+  CLASS_9
+}
+
+enum PackagingType {
+  BAGS
+  DRUMS
+  TANKER
+  ISO_TANK
+  FLEXITANK
+  IBC
+  PALLETS
+  BULK
+}
+
+enum VehicleType {
+  TRUCK
+  CONTAINER
+  TANKER
+  ISO_TANK
+  FLATBED
+  REFRIGERATED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SUBMITTED
+  MATCHING
+  OFFERS_AVAILABLE
+  SELECTED
+  CANCELLED
+  EXPIRED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum ShipmentStatus {
+  BOOKED
+  PICKUP_SCHEDULED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+  DELAYED
+}
+
+enum LeadType {
+  EXCLUSIVE
+  SHARED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+  RECHARGE
+  REFUND
+}
+
+enum WebhookEvent {
+  QUOTE_REQUESTED
+  QUOTE_OFFERS_AVAILABLE
+  QUOTE_OFFER_SELECTED
+  SHIPMENT_BOOKED
+  SHIPMENT_STATUS_UPDATED
+  LEAD_ASSIGNED
+  LEAD_PAYMENT_FAILED
+}
+
+// 1. USERS MODEL
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  phone       String?
+  password    String
+  role        UserRole
+  companyName String?
+  gstin       String?
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  quotes            Quote[]
+  offers            Offer[]
+  partnerCapability PartnerCapability?
+  leadWallet        LeadWallet?
+  auditLogs         AuditLog[]
+  policyConsents    PolicyConsent[]
+  paymentRequests   PaymentRequest[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// 2. QUOTES (FREIGHT REQUESTS) MODEL
+model Quote {
+  id          String      @id @default(cuid())
+  quoteNumber String      @unique
+  status      QuoteStatus @default(DRAFT)
+  traderId    String
+
+  // Section 1: Shipment Info
+  cargoName             String
+  casNumber             String?
+  quantity              Float
+  quantityUnit          String
+  isHazardous           Boolean
+  hazardClass           HazardClass?
+  unNumber              String?
+  cargoReadyDate        DateTime
+  estimatedDeliveryDate DateTime?
+
+  // Section 2: Pickup Location
+  pickupAddress      String
+  pickupCity         String
+  pickupState        String
+  pickupPincode      String
+  pickupCountry      String  @default("India")
+  pickupContactName  String?
+  pickupContactPhone String?
+
+  // Section 3: Delivery Location
+  deliveryAddress      String
+  deliveryCity         String
+  deliveryState        String
+  deliveryPincode      String
+  deliveryCountry      String  @default("India")
+  deliveryContactName  String?
+  deliveryContactPhone String?
+
+  // Section 4: Handling Requirements
+  packagingType         PackagingType
+  packagingDetails      String?
+  specialHandling       String?
+  temperatureControlled Boolean       @default(false)
+  temperatureMin        Float?
+  temperatureMax        Float?
+
+  // Section 5: Vehicle Requirements
+  preferredVehicleType  VehicleType[]
+  vehicleSpecifications String?
+
+  // Section 6: Insurance & Compliance
+  insuranceRequired Boolean @default(false)
+  insuranceValue    Float?
+  msdsRequired      Boolean @default(false)
+
+  // Section 7: Billing & Payment
+  paymentTerms   String?
+  billingAddress String?
+
+  // Section 8: Additional Notes
+  additionalNotes String?
+
+  // System fields
+  expiresAt   DateTime?
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relationships
+  trader    User       @relation(fields: [traderId], references: [id])
+  offers    Offer[]
+  shipment  Shipment?
+  documents Document[]
+  auditLogs AuditLog[]
+
+  @@index([traderId])
+  @@index([status])
+  @@index([cargoReadyDate])
+}
+
+// 3. OFFERS MODEL
+model Offer {
+  id        String      @id @default(cuid())
+  quoteId   String
+  partnerId String
+  status    OfferStatus @default(PENDING)
+
+  // Offer details
+  price               Float
+  currency            String   @default("INR")
+  transitDays         Int
+  offerValidUntil     DateTime
+  pickupAvailableFrom DateTime
+
+  // Value-added services
+  insuranceIncluded  Boolean  @default(false)
+  trackingIncluded   Boolean  @default(true)
+  customsClearance   Boolean  @default(false)
+  valueAddedServices String[]
+
+  // Additional information
+  termsAndConditions String?
+  remarks            String?
+
+  // Lead assignment
+  isSelected      Boolean          @default(false)
+  selectedAt      DateTime?
+  leadTransaction LeadTransaction?
+
+  // System fields
+  submittedAt DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  quote    Quote     @relation(fields: [quoteId], references: [id])
+  partner  User      @relation(fields: [partnerId], references: [id])
+  shipment Shipment?
+
+  @@index([quoteId])
+  @@index([partnerId])
+  @@index([status])
+}
+
+// 4. SHIPMENTS MODEL
+model Shipment {
+  id             String         @id @default(cuid())
+  shipmentNumber String         @unique
+  quoteId        String         @unique
+  offerId        String         @unique
+  status         ShipmentStatus @default(BOOKED)
+
+  // Tracking
+  currentLocation    String?
+  estimatedDelivery  DateTime?
+  actualPickupDate   DateTime?
+  actualDeliveryDate DateTime?
+
+  // Updates
+  statusUpdates  Json[]
+  trackingEvents Json[]
+
+  // POD (Proof of Delivery)
+  podDocument   String?
+  podUploadedAt DateTime?
+  deliveryNotes String?
+
+  // System fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  quote     Quote      @relation(fields: [quoteId], references: [id])
+  offer     Offer      @relation(fields: [offerId], references: [id])
+  documents Document[]
+  auditLogs AuditLog[]
+
+  @@index([shipmentNumber])
+  @@index([status])
+}
+
+// 5. DOCUMENTS MODEL (MSDS/SDS)
+model Document {
+  id         String  @id @default(cuid())
+  quoteId    String?
+  shipmentId String?
+
+  fileName      String
+  fileType      String
+  fileSize      Int
+  fileUrl       String
+  encryptionKey String?
+
+  documentType String
+  uploadedBy   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  quote    Quote?    @relation(fields: [quoteId], references: [id])
+  shipment Shipment? @relation(fields: [shipmentId], references: [id])
+
+  @@index([quoteId])
+  @@index([shipmentId])
+}
+
+// 6. PARTNER CAPABILITIES MODEL
+model PartnerCapability {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Service types
+  serviceTypes String[]
+
+  // DG classes handled
+  dgClasses HazardClass[]
+
+  // Product categories
+  productCategories String[]
+
+  // Geographic coverage
+  serviceCities    String[]
+  serviceStates    String[]
+  serviceCountries String[]
+
+  // Fleet/vehicle types
+  fleetTypes VehicleType[]
+  fleetCount Int?
+
+  // Storage capabilities
+  hasWarehouse       Boolean  @default(false)
+  warehouseLocations String[]
+
+  // Temperature control
+  temperatureControlled Boolean @default(false)
+  temperatureRange      String?
+
+  // Packaging handling
+  packagingCapabilities PackagingType[]
+
+  // Certifications
+  certifications String[]
+
+  // Subscription
+  subscriptionTier SubscriptionTier @default(FREE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// 7. LEAD WALLET MODEL
+model LeadWallet {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  balance  Float  @default(0)
+  currency String @default("INR")
+
+  lowBalanceAlert Boolean @default(true)
+  alertThreshold  Float   @default(1000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user         User              @relation(fields: [userId], references: [id])
+  transactions LeadTransaction[]
+
+  @@index([userId])
+}
+
+// 8. LEAD TRANSACTIONS MODEL
+model LeadTransaction {
+  id       String  @id @default(cuid())
+  walletId String
+  offerId  String? @unique
+
+  transactionType TransactionType
+  amount          Float
+  description     String?
+
+  // Lead-related fields (only for DEBIT transactions)
+  leadId          String?
+  leadType        LeadType?
+  leadCost        Float?
+  creditsDeducted Float?
+
+  // Pricing factors (only for lead transactions)
+  hazardCategory   HazardClass?
+  routeDistance    Float?
+  quantity         Float?
+  vehicleType      VehicleType?
+  stateWisePricing Json?
+
+  // Invoice (for both recharges and lead transactions)
+  invoiceId  String?
+  invoiceUrl String?
+  gstAmount  Float?
+
+  transactionDate DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  // Relationships
+  wallet LeadWallet @relation(fields: [walletId], references: [id])
+  offer  Offer?     @relation(fields: [offerId], references: [id])
+
+  @@index([walletId])
+  @@index([leadId])
+  @@index([transactionType])
+}
+
+// 9. PRICING TIERS MODEL
+model PricingTier {
+  id String @id @default(cuid())
+
+  tierName         String           @unique
+  subscriptionTier SubscriptionTier @unique
+
+  // Base pricing
+  baseLeadCost Float
+
+  // Multipliers
+  hazardMultiplier   Json
+  distanceMultiplier Json
+  quantityMultiplier Json
+  vehicleMultiplier  Json
+  urgencyMultiplier  Json
+
+  // State-wise pricing
+  stateWisePricing Json
+
+  // Features
+  maxLeadsPerDay   Int?
+  exclusiveLeads   Boolean @default(false)
+  priorityMatching Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subscriptionTier])
+}
+
+// 9.1 PRICING CONFIG MODEL (Active Global Configuration)
+model PricingConfig {
+  id String @id @default(cuid())
+  
+  isActive Boolean @default(true)
+  
+  // Base pricing
+  baseLeadCost Float @default(500)
+  
+  // Hazard class multipliers
+  hazardNonHazardous Float @default(1.0)
+  hazardClass1       Float @default(2.5)
+  hazardClass2       Float @default(1.8)
+  hazardClass3       Float @default(1.6)
+  hazardClass4       Float @default(1.5)
+  hazardClass5       Float @default(1.7)
+  hazardClass6       Float @default(1.9)
+  hazardClass7       Float @default(2.0)
+  hazardClass8       Float @default(1.6)
+  hazardClass9       Float @default(1.3)
+  
+  // Distance multipliers
+  distanceSameState Float @default(1.0)
+  distanceShort     Float @default(1.3)
+  distanceMedium    Float @default(1.6)
+  distanceLong      Float @default(2.0)
+  
+  // Quantity multipliers (stored as JSON array of ranges)
+  quantityRanges Json
+  
+  // Vehicle multipliers
+  vehicleTruck        Float @default(1.0)
+  vehicleContainer    Float @default(1.1)
+  vehicleTanker       Float @default(1.3)
+  vehicleIsoTank      Float @default(1.5)
+  vehicleFlatbed      Float @default(1.1)
+  vehicleRefrigerated Float @default(1.4)
+  
+  // Urgency multiplier
+  urgencyMultiplier Float @default(1.3)
+  
+  // Subscription tier discounts
+  tierPremiumDiscount  Float @default(0.7)
+  tierStandardDiscount Float @default(0.85)
+  tierFreeDiscount     Float @default(1.0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([isActive])
+}
+
+// 10. AUDIT LOGS MODEL
+model AuditLog {
+  id         String  @id @default(cuid())
+  userId     String?
+  quoteId    String?
+  shipmentId String?
+
+  action   String
+  entity   String
+  entityId String
+  changes  Json?
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  // Relationships
+  user     User?     @relation(fields: [userId], references: [id])
+  quote    Quote?    @relation(fields: [quoteId], references: [id])
+  shipment Shipment? @relation(fields: [shipmentId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// 11. WEBHOOK LOGS MODEL
+model WebhookLog {
+  id String @id @default(cuid())
+
+  event   WebhookEvent
+  payload Json
+  url     String
+
+  hmacSignature String
+
+  status       Int?
+  responseBody String?
+
+  attempts    Int       @default(0)
+  lastAttempt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([event])
+  @@index([createdAt])
+}
+
+// 12. POLICY CONSENT MODEL
+model PolicyConsent {
+  id String @id @default(cuid())
+
+  userId       String
+  policyType   String
+  policyVersion String
+  accepted     Boolean @default(false)
+  acceptedAt   DateTime?
+
+  // Audit trail
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([policyType])
+}
+
+enum PolicyType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  PARTNER_POLICY
+}
+
+enum PaymentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  UPI
+  CHEQUE
+  CASH
+  ONLINE
+}
+
+// 13. PAYMENT REQUESTS MODEL (Manual Approval System)
+model PaymentRequest {
+  id String @id @default(cuid())
+
+  userId String
+  amount Float
+  currency String @default("INR")
+
+  paymentMethod PaymentMethod
+  status PaymentRequestStatus @default(PENDING)
+
+  // Payment proof
+  referenceNumber String?
+  transactionId String?
+  proofDocument String?
+  paymentDate DateTime?
+
+  // Admin review
+  reviewedBy String?
+  reviewedAt DateTime?
+  reviewNotes String?
+
+  // Request details
+  requestNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
