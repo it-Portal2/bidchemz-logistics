@@ -1,24 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { Layout } from '@/components/layout/Layout';
-import Card from '@/components/ui/Card';
-import { CardHeader, CardBody, CardTitle } from '@/components/ui/Card';
+import Card, { CardHeader, CardBody, CardTitle } from '@/components/ui/Card';
 import { FormField } from '@/components/forms/FormField';
 import Button from '@/components/ui/Button';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { useAuth } from '@/contexts/AuthContext';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function SubmitOffer() {
   const { user, token } = useAuth();
   const router = useRouter();
   const { quoteId } = router.query;
+
   const [quote, setQuote] = useState<any>(null);
   const [wallet, setWallet] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [estimatedCost, setEstimatedCost] = useState(0);
-  const [pricingBreakdown, setPricingBreakdown] = useState<any>(null);
-  const [loadingPricing, setLoadingPricing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [estimatedCost, setEstimatedCost] = useState<number>(0);
 
   const [formData, setFormData] = useState({
     price: '',
@@ -33,28 +34,40 @@ export default function SubmitOffer() {
     remarks: '',
   });
 
+  /* =======================
+     Guards & Initial Load
+  ======================= */
   useEffect(() => {
-    if (token && quoteId) {
-      fetchQuote();
-      fetchWallet();
-    }
-  }, [token, quoteId]);
+    if (!router.isReady || !token || !quoteId) return;
 
-  const fetchQuote = async () => {
+    if (typeof quoteId !== 'string') {
+      setError('Invalid quote reference');
+      setLoading(false);
+      return;
+    }
+
+    fetchQuote(quoteId);
+    fetchWallet();
+  }, [router.isReady, token, quoteId]);
+
+  /* =======================
+     API Calls
+  ======================= */
+  const fetchQuote = async (id: string) => {
     try {
-      const response = await fetch(`/api/quotes/${quoteId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const res = await fetch(`/api/quotes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      const data = await response.json();
-      if (response.ok) {
-        setQuote(data.quote);
-        calculateEstimatedCost(data.quote);
+      const data = await res.json();
+      if (!res.ok || !data?.quote) {
+        throw new Error();
       }
-    } catch (error) {
-      console.error('Error fetching quote:', error);
+
+      setQuote(data.quote);
+      calculateEstimatedCost(data.quote.id);
+    } catch {
+      setError('Quote not found or expired');
     } finally {
       setLoading(false);
     }
@@ -62,55 +75,42 @@ export default function SubmitOffer() {
 
   const fetchWallet = async () => {
     try {
-      const response = await fetch('/api/wallet', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const res = await fetch('/api/wallet', {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      const data = await response.json();
-      if (response.ok) {
-        setWallet(data.wallet);
-      }
-    } catch (error) {
-      console.error('Error fetching wallet:', error);
-    }
+      const data = await res.json();
+      if (res.ok) setWallet(data.wallet);
+    } catch {}
   };
 
-  const calculateEstimatedCost = async (quoteData: any) => {
-    setLoadingPricing(true);
+  const calculateEstimatedCost = async (quoteId: string) => {
     try {
-      const response = await fetch('/api/calculate-lead-cost', {
+      const res = await fetch('/api/calculate-lead-cost', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ quoteId: quoteData.id }),
+        body: JSON.stringify({ quoteId }),
       });
 
-      const data = await response.json();
-      if (response.ok) {
+      const data = await res.json();
+      if (res.ok) {
         setEstimatedCost(data.estimatedLeadCost);
-        setPricingBreakdown(data);
-      } else {
-        throw new Error(data.error || 'Failed to calculate pricing');
       }
-    } catch (error) {
-      console.error('Error calculating lead cost:', error);
-      setEstimatedCost(0);
-      setPricingBreakdown(null);
-      alert('Failed to calculate lead cost. Please refresh and try again.');
-    } finally {
-      setLoadingPricing(false);
-    }
+    } catch {}
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  /* =======================
+     Handlers
+  ======================= */
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
@@ -119,56 +119,58 @@ export default function SubmitOffer() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!quoteId) return;
+    if (!quote || !wallet) return;
 
-    if (!pricingBreakdown || estimatedCost === 0) {
-      alert('Lead cost calculation failed. Please refresh the page and try again.');
-      return;
-    }
-
-    if (wallet && wallet.balance < estimatedCost) {
-      alert(`Insufficient balance. You need ₹${estimatedCost} to submit this offer. Current balance: ₹${wallet.balance}`);
+    if (wallet.balance < estimatedCost) {
+      alert('Insufficient wallet balance');
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/offers', {
+      const res = await fetch('/api/offers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          quoteId,
-          ...formData,
-          price: parseFloat(formData.price),
-          transitDays: parseInt(formData.transitDays),
-          valueAddedServices: formData.valueAddedServices.split(',').map(s => s.trim()).filter(Boolean),
+          quoteId: quote.id,
+          price: Number(formData.price),
+          transitDays: Number(formData.transitDays),
+          offerValidUntil: formData.offerValidUntil,
+          pickupAvailableFrom: formData.pickupAvailableFrom,
+          insuranceIncluded: formData.insuranceIncluded,
+          trackingIncluded: formData.trackingIncluded,
+          customsClearance: formData.customsClearance,
+          valueAddedServices: formData.valueAddedServices
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          termsAndConditions: formData.termsAndConditions,
+          remarks: formData.remarks,
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit offer');
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Submission failed');
 
       router.push('/partner/dashboard');
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to submit offer');
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit offer');
     } finally {
       setSubmitting(false);
     }
   };
 
+  /* =======================
+     UI States
+  ======================= */
   if (!user || user.role !== 'LOGISTICS_PARTNER') {
     return (
       <Layout>
-        <div className="text-center py-12">
-          <p className="text-gray-600">Access denied. Partners only.</p>
-        </div>
+        <EmptyState title="Access denied" description="Partners only" />
       </Layout>
     );
   }
@@ -176,272 +178,98 @@ export default function SubmitOffer() {
   if (loading) {
     return (
       <Layout>
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="py-12 text-center">
+          <div className="inline-block h-10 w-10 animate-spin rounded-full border-b-2 border-blue-600" />
         </div>
       </Layout>
     );
   }
 
-  if (!quote) {
+  if (error || !quote) {
     return (
       <Layout>
-        <div className="text-center py-12">
-          <p className="text-gray-600">Quote not found</p>
-        </div>
+        <EmptyState
+          title="Quote not available"
+          description={error || 'This quote may have expired'}
+          actionLabel="Back to Leads"
+          onAction={() => router.push('/partner/leads')}
+        />
       </Layout>
     );
   }
 
+  /* =======================
+     Page
+  ======================= */
   return (
     <Layout>
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Submit Offer</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Submit Offer</h1>
           {quote.expiresAt && <CountdownTimer expiresAt={quote.expiresAt} />}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Offer Details</CardTitle>
-              </CardHeader>
-              <CardBody>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      label="Your Price (INR)"
-                      name="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={handleChange}
-                      required
-                      min="0"
-                      step="0.01"
-                      placeholder="Enter your competitive price"
-                    />
-                    <FormField
-                      label="Transit Days"
-                      name="transitDays"
-                      type="number"
-                      value={formData.transitDays}
-                      onChange={handleChange}
-                      required
-                      min="1"
-                      placeholder="Number of days"
-                    />
-                  </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Offer Details</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  label="Price (INR)"
+                  name="price"
+                  type="number"
+                  required
+                  value={formData.price}
+                  onChange={handleChange}
+                />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      label="Offer Valid Until"
-                      name="offerValidUntil"
-                      type="datetime-local"
-                      value={formData.offerValidUntil}
-                      onChange={handleChange}
-                      required
-                    />
-                    <FormField
-                      label="Pickup Available From"
-                      name="pickupAvailableFrom"
-                      type="datetime-local"
-                      value={formData.pickupAvailableFrom}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
+                <FormField
+                  label="Transit Days"
+                  name="transitDays"
+                  type="number"
+                  required
+                  value={formData.transitDays}
+                  onChange={handleChange}
+                />
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Value-Added Services
-                    </label>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="insuranceIncluded"
-                          name="insuranceIncluded"
-                          checked={formData.insuranceIncluded}
-                          onChange={handleChange}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="insuranceIncluded" className="ml-2 text-sm text-gray-700">
-                          Insurance Included
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="trackingIncluded"
-                          name="trackingIncluded"
-                          checked={formData.trackingIncluded}
-                          onChange={handleChange}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="trackingIncluded" className="ml-2 text-sm text-gray-700">
-                          Real-time Tracking Included
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="customsClearance"
-                          name="customsClearance"
-                          checked={formData.customsClearance}
-                          onChange={handleChange}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="customsClearance" className="ml-2 text-sm text-gray-700">
-                          Customs Clearance Assistance
-                        </label>
-                      </div>
-                    </div>
-                  </div>
+                <FormField
+                  label="Offer Valid Until"
+                  name="offerValidUntil"
+                  type="date"
+                  required
+                  value={formData.offerValidUntil}
+                  onChange={handleChange}
+                />
 
-                  <FormField
-                    label="Additional Services (comma-separated)"
-                    name="valueAddedServices"
-                    type="textarea"
-                    value={formData.valueAddedServices}
-                    onChange={handleChange}
-                    placeholder="e.g., Warehousing, Packing, Loading assistance"
-                  />
+                <FormField
+                  label="Pickup Available From"
+                  name="pickupAvailableFrom"
+                  type="date"
+                  required
+                  value={formData.pickupAvailableFrom}
+                  onChange={handleChange}
+                />
+              </div>
 
-                  <FormField
-                    label="Terms & Conditions"
-                    name="termsAndConditions"
-                    type="textarea"
-                    value={formData.termsAndConditions}
-                    onChange={handleChange}
-                    placeholder="Your terms and conditions"
-                  />
+              <div className="flex justify-between items-center pt-4">
+                <p className="text-sm text-gray-600">
+                  Estimated Lead Cost: <strong>₹{estimatedCost}</strong>
+                </p>
 
-                  <FormField
-                    label="Remarks"
-                    name="remarks"
-                    type="textarea"
-                    value={formData.remarks}
-                    onChange={handleChange}
-                    placeholder="Any additional information"
-                  />
-
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => router.back()}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      disabled={submitting}
-                    >
-                      {submitting ? 'Submitting...' : 'Submit Offer'}
-                    </Button>
-                  </div>
-                </form>
-              </CardBody>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Quote Summary</CardTitle>
-              </CardHeader>
-              <CardBody>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-500">Cargo</p>
-                    <p className="font-medium">{quote.cargoName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Quantity</p>
-                    <p className="font-medium">{quote.quantity} {quote.quantityUnit}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">From</p>
-                    <p className="font-medium">{quote.pickupCity}, {quote.pickupState}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">To</p>
-                    <p className="font-medium">{quote.deliveryCity}, {quote.deliveryState}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Ready Date</p>
-                    <p className="font-medium">{new Date(quote.cargoReadyDate).toLocaleDateString()}</p>
-                  </div>
-                  {quote.isHazardous && (
-                    <div className="pt-2 border-t">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        ⚠️ Hazardous: {quote.hazardClass}
-                      </span>
-                    </div>
-                  )}
+                <div className="flex gap-3">
+                  <Button variant="secondary" type="button" onClick={() => router.back()}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" type="submit" disabled={submitting}>
+                    {submitting ? 'Submitting…' : 'Submit Offer'}
+                  </Button>
                 </div>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Lead Cost</CardTitle>
-              </CardHeader>
-              <CardBody>
-                {loadingPricing ? (
-                  <div className="text-center py-4">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <p className="text-sm text-gray-500 mt-2">Calculating...</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-center">
-                      <p className="text-3xl font-bold text-blue-600 mb-2">
-                        ₹{estimatedCost.toFixed(2)}
-                      </p>
-                      <p className="text-sm text-gray-600 mb-4">
-                        This amount will be deducted upon submission
-                      </p>
-                    </div>
-
-                    {pricingBreakdown && pricingBreakdown.breakdown && pricingBreakdown.breakdown.explanation && (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="text-xs font-semibold text-gray-700 mb-2">Pricing Breakdown:</p>
-                        <div className="space-y-1">
-                          {pricingBreakdown.breakdown.explanation.map((item: string, index: number) => (
-                            <p key={index} className="text-xs text-gray-600">
-                              {item}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {wallet && (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="text-sm text-gray-500">Current Wallet Balance</p>
-                        <p className={`text-xl font-semibold ${wallet.balance >= estimatedCost ? 'text-green-600' : 'text-red-600'}`}>
-                          ₹{wallet.balance.toLocaleString()}
-                        </p>
-                        {wallet.balance < estimatedCost ? (
-                          <p className="text-xs text-red-600 mt-2 font-medium">
-                            ⚠️ Insufficient balance - Please recharge
-                          </p>
-                        ) : (
-                          <p className="text-xs text-green-600 mt-2">
-                            ✓ Balance after submission: ₹{(wallet.balance - estimatedCost).toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardBody>
-            </Card>
-          </div>
-        </div>
+              </div>
+            </form>
+          </CardBody>
+        </Card>
       </div>
     </Layout>
   );

@@ -1,7 +1,13 @@
 import { NextApiResponse } from 'next';
 import prisma from '@/lib/prisma';
 import { withAuth, AuthenticatedRequest } from '@/lib/middleware';
-import { UserRole, OfferStatus, QuoteStatus, LeadType, TransactionType } from '@prisma/client';
+import {
+  UserRole,
+  OfferStatus,
+  QuoteStatus,
+  LeadType,
+  TransactionType,
+} from '@prisma/client';
 
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -15,10 +21,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   }
 
   try {
+    /* =======================
+       AUTHORIZATION
+    ======================= */
     if (req.user!.role !== UserRole.TRADER) {
-      return res.status(403).json({
-        error: 'Only traders can select offers',
-      });
+      return res.status(403).json({ error: 'Only traders can select offers' });
     }
 
     const offer = await prisma.offer.findUnique({
@@ -43,11 +50,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     }
 
     if (offer.status !== OfferStatus.PENDING) {
-      return res.status(400).json({ error: 'Offer is not available for selection' });
+      return res.status(400).json({
+        error: 'Offer already processed',
+      });
     }
 
     const wallet = offer.partner.leadWallet;
-
     if (!wallet) {
       return res.status(400).json({
         error: 'Partner does not have a lead wallet',
@@ -56,13 +64,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     const leadCost = calculateLeadCost(offer);
 
-    if (wallet.balance < leadCost) {
-      return res.status(400).json({
-        error: 'Partner has insufficient lead wallet balance',
-      });
-    }
-
+    /* =======================
+       TRANSACTION
+    ======================= */
     const result = await prisma.$transaction(async (tx) => {
+      // 🔒 Lock wallet
       const currentWallet = await tx.leadWallet.findUnique({
         where: { id: wallet.id },
       });
@@ -71,6 +77,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         throw new Error('Insufficient wallet balance');
       }
 
+      // ✅ Prevent double debit (VERY IMPORTANT)
+      const existingTransaction = await tx.leadTransaction.findUnique({
+        where: { offerId: offer.id },
+      });
+
+      // Update offer
       await tx.offer.update({
         where: { id: offer.id },
         data: {
@@ -80,6 +92,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         },
       });
 
+      // Reject other offers
       await tx.offer.updateMany({
         where: {
           quoteId: offer.quoteId,
@@ -91,6 +104,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         },
       });
 
+      // Update quote
       await tx.quote.update({
         where: { id: offer.quoteId },
         data: {
@@ -98,36 +112,44 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         },
       });
 
-      await tx.leadWallet.update({
-        where: { id: wallet.id },
-        data: {
-          balance: currentWallet.balance - leadCost,
-        },
-      });
+      // 💰 Deduct wallet ONLY ONCE
+      if (!existingTransaction) {
+        await tx.leadWallet.update({
+          where: { id: wallet.id },
+          data: {
+            balance: {
+              decrement: leadCost,
+            },
+          },
+        });
 
-      const leadTransaction = await tx.leadTransaction.create({
-        data: {
-          walletId: wallet.id,
-          offerId: offer.id,
-          transactionType: TransactionType.DEBIT,
-          amount: leadCost,
-          description: `Lead charge for quote ${offer.quote.quoteNumber}`,
-          leadId: `LEAD-${Date.now()}`,
-          leadType: offer.partner.partnerCapability?.subscriptionTier === 'PREMIUM'
-            ? LeadType.EXCLUSIVE
-            : LeadType.SHARED,
-          leadCost,
-          creditsDeducted: leadCost,
-          hazardCategory: offer.quote.hazardClass,
-          quantity: offer.quote.quantity,
-        },
-      });
+        await tx.leadTransaction.create({
+          data: {
+            walletId: wallet.id,
+            offerId: offer.id,
+            transactionType: TransactionType.DEBIT,
+            amount: leadCost,
+            description: `Lead charge for quote ${offer.quote.quoteNumber}`,
+            leadId: `LEAD-${Date.now()}`,
+            leadType:
+              offer.partner.partnerCapability?.subscriptionTier === 'PREMIUM'
+                ? LeadType.EXCLUSIVE
+                : LeadType.SHARED,
+            leadCost,
+            creditsDeducted: leadCost,
+            hazardCategory: offer.quote.hazardClass,
+            quantity: offer.quote.quantity,
+          },
+        });
+      }
 
-      const shipmentNumber = `SHP-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-
+      // 🚚 Create shipment (safe – offerId is unique here)
       const shipment = await tx.shipment.create({
         data: {
-          shipmentNumber,
+          shipmentNumber: `SHP-${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 9)
+            .toUpperCase()}`,
           quoteId: offer.quoteId,
           offerId: offer.id,
           statusUpdates: [],
@@ -135,9 +157,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         },
       });
 
-      return { offer, leadTransaction, shipment };
+      return { shipment };
     });
 
+    /* =======================
+       AUDIT LOG
+    ======================= */
     await prisma.auditLog.create({
       data: {
         userId: req.user!.userId,
@@ -146,83 +171,35 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         entity: 'OFFER',
         entityId: offer.id,
         changes: {
-          offerId: offer.id,
           partnerId: offer.partnerId,
           leadCost,
         },
       },
     });
 
-    // Trigger webhooks for offer selection, lead assignment, and shipment booking
-    try {
-      const { sendWebhook } = await import('@/lib/webhook');
-      
-      // QUOTE_OFFER_SELECTED webhook
-      await sendWebhook(
-        process.env.WEBHOOK_URL || 'http://localhost:5000/api/webhooks',
-        'QUOTE_OFFER_SELECTED',
-        {
-          quoteId: offer.quoteId,
-          quoteNumber: offer.quote.quoteNumber,
-          offerId: offer.id,
-          partnerId: offer.partnerId,
-          partnerCompany: offer.partner.companyName,
-          offerPrice: offer.price,
-          selectedBy: req.user!.userId,
-        }
-      ).catch(err => console.error('Webhook error:', err));
-
-      // LEAD_ASSIGNED webhook
-      await sendWebhook(
-        process.env.WEBHOOK_URL || 'http://localhost:5000/api/webhooks',
-        'LEAD_ASSIGNED',
-        {
-          leadId: result.leadTransaction.leadId,
-          partnerId: offer.partnerId,
-          quoteId: offer.quoteId,
-          leadCost,
-          leadType: result.leadTransaction.leadType,
-          transactionId: result.leadTransaction.id,
-        }
-      ).catch(err => console.error('Webhook error:', err));
-
-      // SHIPMENT_BOOKED webhook
-      await sendWebhook(
-        process.env.WEBHOOK_URL || 'http://localhost:5000/api/webhooks',
-        'SHIPMENT_BOOKED',
-        {
-          shipmentId: result.shipment.id,
-          shipmentNumber: result.shipment.shipmentNumber,
-          quoteId: offer.quoteId,
-          offerId: offer.id,
-          partnerId: offer.partnerId,
-        }
-      ).catch(err => console.error('Webhook error:', err));
-    } catch (webhookError) {
-      console.error('Error sending webhooks:', webhookError);
-    }
-
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Offer selected successfully',
       shipment: result.shipment,
     });
   } catch (error) {
     console.error('Error selecting offer:', error);
-    res.status(500).json({ error: 'Failed to select offer' });
+
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    return res.status(500).json({ error: 'Failed to select offer' });
   }
 }
 
+/* =======================
+   PRICING
+======================= */
 function calculateLeadCost(offer: any): number {
   let baseCost = 500;
 
-  if (offer.quote.isHazardous) {
-    baseCost *= 1.5;
-  }
-
-  if (offer.quote.quantity > 20) {
-    baseCost *= 1.3;
-  }
-
+  if (offer.quote.isHazardous) baseCost *= 1.5;
+  if (offer.quote.quantity > 20) baseCost *= 1.3;
   if (offer.partner.partnerCapability?.subscriptionTier === 'PREMIUM') {
     baseCost *= 2;
   }

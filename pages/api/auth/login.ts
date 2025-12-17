@@ -23,15 +23,24 @@ export default async function handler(
       where: { email },
     });
 
+    // Do not reveal whether email exists
     if (!user) {
       return res.status(401).json({
         error: 'Invalid email or password',
       });
     }
 
+    // Block deactivated accounts
     if (!user.isActive) {
       return res.status(403).json({
         error: 'Account is deactivated. Please contact support.',
+      });
+    }
+
+    // 🔒 BLOCK LOGIN IF EMAIL IS NOT VERIFIED
+    if (!user.isVerified) {
+      return res.status(403).json({
+        error: 'Please verify your email before logging in.',
       });
     }
 
@@ -50,6 +59,7 @@ export default async function handler(
       companyName: user.companyName || undefined,
     });
 
+    // Audit log for security tracking
     await prisma.auditLog.create({
       data: {
         userId: user.id,
@@ -59,7 +69,7 @@ export default async function handler(
       },
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       user: {
         id: user.id,
         email: user.email,
@@ -72,6 +82,6 @@ export default async function handler(
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

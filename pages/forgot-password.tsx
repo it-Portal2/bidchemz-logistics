@@ -1,7 +1,4 @@
 import React, { useState } from 'react';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Card from '@/components/ui/Card';
 import Link from 'next/link';
 
 export default function ForgotPassword() {
@@ -16,109 +13,144 @@ export default function ForgotPassword() {
     setError('');
 
     try {
-      // For now, send email to support
-      const subject = encodeURIComponent('Password Reset Request');
-      const body = encodeURIComponent(
-        `I would like to reset my password for the account: ${email}\n\nPlease send me instructions to reset my password.`
-      );
-      
-      // Open mailto link
-      window.location.href = `mailto:support@bidchemz.com?subject=${subject}&body=${body}`;
-      
-      // Show success message
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!res.ok) {
+        throw new Error();
+      }
+
       setSubmitted(true);
-    } catch (err) {
-      setError('Failed to process your request. Please try again or contact support directly.');
+    } catch {
+      setError('Unable to send reset link. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-600 mb-2">BidChemz Logistics</h1>
-          <h2 className="text-xl text-gray-900">Reset your password</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+
+        {/* LOGO / BRAND */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-blue-600">
+            BidChemz Logistics
+          </h1>
         </div>
 
-        <Card>
-          {!submitted ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="text-sm text-gray-600">
-                <p className="mb-4">
-                  Enter your email address and we'll help you reset your password.
-                </p>
-                <p className="text-xs bg-blue-50 border border-blue-200 rounded p-3">
-                  Note: Password reset requests are currently handled by our support team. 
-                  Your email client will open with a pre-filled message to our support team.
-                </p>
+        {/* ================= REQUEST FORM ================= */}
+        {!submitted && (
+          <>
+            <h2 className="text-xl font-semibold text-gray-900 text-center mb-2">
+              Reset your password
+            </h2>
+
+            <p className="text-sm text-gray-600 text-center mb-6">
+              Enter the email associated with your account and we’ll send you a
+              secure reset link.
+            </p>
+
+            {error && (
+              <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
-                  {error}
-                </div>
-              )}
-
-              <Input
-                label="Email Address"
-                type="email"
-                name="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                disabled={loading || !email}
-                className="w-full py-3"
+                disabled={loading}
+                className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-60"
               >
-                {loading ? 'Processing...' : 'Request Password Reset'}
-              </Button>
-
-              <div className="text-center text-sm">
-                <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-                  Back to Sign In
-                </Link>
-              </div>
+                {loading ? 'Sending reset link…' : 'Send reset link'}
+              </button>
             </form>
-          ) : (
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-              </div>
-              
-              <h3 className="text-lg font-semibold text-gray-900">Request Sent!</h3>
-              
-              <p className="text-sm text-gray-600">
-                Your email client should have opened with a pre-filled message to our support team. 
-                Please send the email to complete your password reset request.
-              </p>
-              
-              <p className="text-xs text-gray-500">
-                If your email client didn't open, you can email us directly at{' '}
-                <a href="mailto:support@bidchemz.com" className="text-blue-600 hover:underline">
-                  support@bidchemz.com
-                </a>
-              </p>
 
-              <div className="pt-4">
-                <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium text-sm inline-block">
-                  Back to Sign In
-                </Link>
+            <div className="mt-6 text-center">
+              <Link
+                href="/login"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Back to Sign In
+              </Link>
+            </div>
+          </>
+        )}
+
+        {/* ================= SUCCESS STATE ================= */}
+        {submitted && (
+          <div className="text-center">
+
+            {/* Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
               </div>
             </div>
-          )}
-        </Card>
+
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Check your email
+            </h2>
+
+            <p className="text-sm text-gray-700 mb-4">
+              We’ve sent a secure password reset link to your email address.
+            </p>
+
+            <p className="text-xs text-gray-500 leading-relaxed mb-6">
+              If an account exists with the email you entered, you’ll receive the
+              link shortly. The link will expire in <strong>30 minutes</strong>.
+              Please check your spam or promotions folder if you don’t see it.
+            </p>
+
+            <Link
+              href="/login"
+              className="block w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition"
+            >
+              Back to Sign In
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitted(false);
+                setEmail('');
+              }}
+              className="mt-4 text-sm text-blue-600 hover:underline"
+            >
+              Resend email
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -7,9 +7,56 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   if (typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid quote ID' });
+    return res.status(400).json({ error: 'Invalid quote identifier' });
   }
 
+  /* ----------------------------- GET QUOTE ----------------------------- */
+  if (req.method === 'GET') {
+    try {
+      if (![UserRole.TRADER, UserRole.LOGISTICS_PARTNER, UserRole.ADMIN].includes(req.user!.role)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const quote = await prisma.quote.findFirst({
+        where: {
+          OR: [
+            { id },              // DB UUID
+            { quoteNumber: id }, // Business reference
+          ],
+        },
+        include: {
+          trader: {
+            select: { id: true, email: true, companyName: true },
+          },
+          offers: {
+            select: { id: true, price: true, status: true, partnerId: true },
+          },
+        },
+      });
+
+      if (!quote) {
+        return res.status(404).json({ error: 'Quote not found' });
+      }
+
+      const isOwner = quote.traderId === req.user!.userId;
+      const isAdmin = req.user!.role === UserRole.ADMIN;
+      const isPartner = req.user!.role === UserRole.LOGISTICS_PARTNER;
+
+      if (!isOwner && !isAdmin && !isPartner) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      return res.status(200).json({
+        quote,
+        isExpired: quote.expiresAt ? new Date(quote.expiresAt) < new Date() : false,
+      });
+    } catch (error) {
+      console.error('Error fetching quote:', error);
+      return res.status(500).json({ error: 'Failed to fetch quote' });
+    }
+  }
+
+  /* ----------------------------- PATCH QUOTE ----------------------------- */
   if (req.method === 'PATCH') {
     try {
       if (req.user!.role !== UserRole.ADMIN) {
@@ -32,26 +79,29 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         },
       });
 
-      res.status(200).json({ quote: updatedQuote });
+      return res.status(200).json({ quote: updatedQuote });
     } catch (error) {
       console.error('Error updating quote:', error);
-      res.status(500).json({ error: 'Failed to update quote' });
+      return res.status(500).json({ error: 'Failed to update quote' });
     }
-  } else if (req.method === 'DELETE') {
+  }
+
+  /* ----------------------------- DELETE QUOTE ----------------------------- */
+  if (req.method === 'DELETE') {
     try {
       if (req.user!.role !== UserRole.ADMIN) {
         return res.status(403).json({ error: 'Only admins can delete quotes' });
       }
 
       await prisma.quote.delete({ where: { id } });
-      res.status(200).json({ message: 'Quote deleted successfully' });
+      return res.status(200).json({ message: 'Quote deleted successfully' });
     } catch (error) {
       console.error('Error deleting quote:', error);
-      res.status(500).json({ error: 'Failed to delete quote' });
+      return res.status(500).json({ error: 'Failed to delete quote' });
     }
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
   }
+
+  return res.status(405).json({ error: 'Method not allowed' });
 }
 
 export default withAuth(handler);

@@ -1,201 +1,77 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { sendVerificationEmail } from '@/lib/mailer';
 import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { hashPassword, generateToken } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
 import { validatePasswordStrength } from '@/lib/password-validation';
-import { PARTNER_POLICY, TERMS_OF_SERVICE, PRIVACY_POLICY } from '@/lib/policy';
+import crypto from 'crypto';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const {
-      email,
-      password,
-      phone,
-      role,
-      companyName,
-      gstin,
-      consents,
-    } = req.body;
+    const { email, password, phone, role, companyName, gstin, consents } = req.body;
 
-    if (!email || !password || !role) {
-      return res.status(400).json({
-        error: 'Email, password, and role are required',
-      });
+    if (!email || !password || !role || !phone) {
+      return res.status(400).json({ error: 'Email, password, role, and phone are required' });
+    }
+
+    if (phone.length < 10) {
+      return res.status(400).json({ error: 'Invalid phone number' });
     }
 
     if (!Object.values(UserRole).includes(role)) {
-      return res.status(400).json({
-        error: 'Invalid role. Must be TRADER or LOGISTICS_PARTNER',
-      });
+      return res.status(400).json({ error: 'Invalid role' });
     }
 
-    // SECURITY: Block ADMIN role from public signup - privilege escalation prevention
     if (role === UserRole.ADMIN) {
-      return res.status(403).json({
-        error: 'Admin accounts cannot be created through public signup. Please contact support.',
-      });
+      return res.status(403).json({ error: 'Admin signup is not allowed' });
     }
 
-    // Only allow TRADER and LOGISTICS_PARTNER roles for public signup
-    if (role !== UserRole.TRADER && role !== UserRole.LOGISTICS_PARTNER) {
-      return res.status(403).json({
-        error: 'Only Trader and Logistics Partner accounts can be created through signup',
-      });
-    }
-
-    // Validate password strength
     const passwordValidation = validatePasswordStrength(password);
     if (!passwordValidation.isValid) {
-      return res.status(400).json({
-        error: 'Password does not meet security requirements',
-        details: passwordValidation.errors,
-      });
+      return res.status(400).json({ error: 'Weak password' });
     }
 
-    // Validate policy consents
-    if (!consents?.termsOfService) {
-      return res.status(400).json({
-        error: 'You must accept the Terms of Service',
-      });
-    }
-
-    if (!consents?.privacyPolicy) {
-      return res.status(400).json({
-        error: 'You must accept the Privacy Policy',
-      });
-    }
-
-    if (role === UserRole.LOGISTICS_PARTNER && !consents?.partnerPolicy) {
-      return res.status(400).json({
-        error: 'Logistics Partners must accept the Partner Policy',
-      });
-    }
-
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({
-        error: 'User with this email already exists',
-      });
+      return res.status(409).json({ error: 'User already exists' });
     }
 
     const hashedPassword = await hashPassword(password);
 
-    // Get user's IP address and user agent for audit trail
-    const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 
-                      req.socket.remoteAddress || 
-                      'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
-    const now = new Date();
-
-    // Prepare policy consents
-    const consentRecords = [
-      {
-        policyType: 'TERMS_OF_SERVICE',
-        policyVersion: TERMS_OF_SERVICE.version,
-        accepted: consents.termsOfService,
-        acceptedAt: now,
-        ipAddress,
-        userAgent,
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        phone,
+        role,
+        companyName,
+        gstin,
+        isVerified: false,
+        isActive: true,
       },
-      {
-        policyType: 'PRIVACY_POLICY',
-        policyVersion: PRIVACY_POLICY.version,
-        accepted: consents.privacyPolicy,
-        acceptedAt: now,
-        ipAddress,
-        userAgent,
-      },
-    ];
-
-    if (role === UserRole.LOGISTICS_PARTNER && consents.partnerPolicy) {
-      consentRecords.push({
-        policyType: 'PARTNER_POLICY',
-        policyVersion: PARTNER_POLICY.version,
-        accepted: consents.partnerPolicy,
-        acceptedAt: now,
-        ipAddress,
-        userAgent,
-      });
-    }
-
-    // Create user, policy consents, and partner-specific data in a single transaction
-    const user = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          phone,
-          role,
-          companyName,
-          gstin,
-          isVerified: false,
-          isActive: true,
-          policyConsents: {
-            create: consentRecords,
-          },
-        },
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          companyName: true,
-          isVerified: true,
-          createdAt: true,
-        },
-      });
-
-      if (role === UserRole.LOGISTICS_PARTNER) {
-        await tx.partnerCapability.create({
-          data: {
-            userId: newUser.id,
-            serviceTypes: [],
-            dgClasses: [],
-            productCategories: [],
-            serviceCities: [],
-            serviceStates: [],
-            serviceCountries: [],
-            fleetTypes: [],
-            packagingCapabilities: [],
-            certifications: [],
-            warehouseLocations: [],
-          },
-        });
-
-        await tx.leadWallet.create({
-          data: {
-            userId: newUser.id,
-            balance: 0,
-          },
-        });
-      }
-
-      return newUser;
     });
 
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      companyName: user.companyName || undefined,
+    const token = crypto.randomBytes(32).toString('hex');
+
+    await prisma.EmailVerificationToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
     });
 
-    res.status(201).json({
-      user,
-      token,
-      message: 'User registered successfully',
+    await sendVerificationEmail(user.email, token);
+
+    return res.status(201).json({
+      message: 'Signup successful. Please verify your email.',
     });
   } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error(error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

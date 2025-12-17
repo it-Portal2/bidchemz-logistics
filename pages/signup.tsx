@@ -132,9 +132,9 @@ export default function Signup() {
         throw new Error(data.error || 'Signup failed');
       }
 
-      localStorage.setItem('token', data.token);
-      router.push('/');
-      window.location.reload();
+      router.push('/verify-pending');
+
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed');
     } finally {
@@ -180,13 +180,12 @@ export default function Signup() {
               <React.Fragment key={s}>
                 <div className="flex flex-col items-center">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
-                      s === step
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${s === step
                         ? 'bg-blue-600 text-white shadow-lg scale-110'
                         : s < step
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-200 text-gray-500'
+                      }`}
                   >
                     {s < step ? (
                       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -283,6 +282,7 @@ export default function Signup() {
                     type="tel"
                     name="phone"
                     value={formData.phone}
+                    required
                     onChange={handleChange}
                     placeholder="+91 XXXXX XXXXX"
                     autoComplete="tel"

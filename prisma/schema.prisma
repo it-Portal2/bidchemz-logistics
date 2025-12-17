@@ -115,13 +115,15 @@ model User {
   updatedAt   DateTime @updatedAt
 
   // Relationships
-  quotes            Quote[]
-  offers            Offer[]
-  partnerCapability PartnerCapability?
-  leadWallet        LeadWallet?
-  auditLogs         AuditLog[]
-  policyConsents    PolicyConsent[]
-  paymentRequests   PaymentRequest[]
+  quotes                  Quote[]
+  offers                  Offer[]
+  partnerCapability       PartnerCapability?
+  leadWallet              LeadWallet?
+  auditLogs               AuditLog[]
+  policyConsents          PolicyConsent[]
+  paymentRequests         PaymentRequest[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
 
   @@index([email])
   @@index([role])
@@ -457,12 +459,12 @@ model PricingTier {
 // 9.1 PRICING CONFIG MODEL (Active Global Configuration)
 model PricingConfig {
   id String @id @default(cuid())
-  
+
   isActive Boolean @default(true)
-  
+
   // Base pricing
   baseLeadCost Float @default(500)
-  
+
   // Hazard class multipliers
   hazardNonHazardous Float @default(1.0)
   hazardClass1       Float @default(2.5)
@@ -474,16 +476,16 @@ model PricingConfig {
   hazardClass7       Float @default(2.0)
   hazardClass8       Float @default(1.6)
   hazardClass9       Float @default(1.3)
-  
+
   // Distance multipliers
   distanceSameState Float @default(1.0)
   distanceShort     Float @default(1.3)
   distanceMedium    Float @default(1.6)
   distanceLong      Float @default(2.0)
-  
+
   // Quantity multipliers (stored as JSON array of ranges)
   quantityRanges Json
-  
+
   // Vehicle multipliers
   vehicleTruck        Float @default(1.0)
   vehicleContainer    Float @default(1.1)
@@ -491,18 +493,18 @@ model PricingConfig {
   vehicleIsoTank      Float @default(1.5)
   vehicleFlatbed      Float @default(1.1)
   vehicleRefrigerated Float @default(1.4)
-  
+
   // Urgency multiplier
   urgencyMultiplier Float @default(1.3)
-  
+
   // Subscription tier discounts
   tierPremiumDiscount  Float @default(0.7)
   tierStandardDiscount Float @default(0.85)
   tierFreeDiscount     Float @default(1.0)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([isActive])
 }
 
@@ -559,11 +561,11 @@ model WebhookLog {
 model PolicyConsent {
   id String @id @default(cuid())
 
-  userId       String
-  policyType   String
+  userId        String
+  policyType    String
   policyVersion String
-  accepted     Boolean @default(false)
-  acceptedAt   DateTime?
+  accepted      Boolean   @default(false)
+  acceptedAt    DateTime?
 
   // Audit trail
   ipAddress String?
@@ -600,26 +602,53 @@ enum PaymentMethod {
   ONLINE
 }
 
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetOTP {
+  id        String   @id @default(uuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+}
+
 // 13. PAYMENT REQUESTS MODEL (Manual Approval System)
 model PaymentRequest {
   id String @id @default(cuid())
 
-  userId String
-  amount Float
+  userId   String
+  amount   Float
   currency String @default("INR")
 
   paymentMethod PaymentMethod
-  status PaymentRequestStatus @default(PENDING)
+  status        PaymentRequestStatus @default(PENDING)
 
   // Payment proof
   referenceNumber String?
-  transactionId String?
-  proofDocument String?
-  paymentDate DateTime?
+  transactionId   String?
+  proofDocument   String?
+  paymentDate     DateTime?
 
   // Admin review
-  reviewedBy String?
-  reviewedAt DateTime?
+  reviewedBy  String?
+  reviewedAt  DateTime?
   reviewNotes String?
 
   // Request details

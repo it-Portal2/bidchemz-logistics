@@ -66,7 +66,7 @@ export default function PartnerLeads() {
     // Hazard filter
     if (hazardFilter === 'hazardous' && !lead.isHazardous) return false;
     if (hazardFilter === 'non-hazardous' && lead.isHazardous) return false;
-    
+
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -79,13 +79,15 @@ export default function PartnerLeads() {
         lead.deliveryState.toLowerCase().includes(query)
       );
     }
-    
+
     return true;
   });
 
-  const handleSubmitOffer = (leadId: string) => {
-    router.push(`/partner/submit-offer?quoteId=${leadId}`);
-  };
+  const handleSubmitOffer = (quoteId: string) => {
+  router.push(`/partner/submit-offer?quoteId=${quoteId}`);
+};
+
+
 
   if (!user || user.role !== 'LOGISTICS_PARTNER') {
     return (
@@ -279,6 +281,8 @@ export default function PartnerLeads() {
                       >
                         Submit Offer
                       </Button>
+
+
                     </div>
                   </div>
                 </CardBody>
