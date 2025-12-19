@@ -1,5 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserRole } from '@prisma/client';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { UserRole } from "@prisma/client";
 
 interface User {
   id: string;
@@ -13,6 +19,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithToken: (token: string, userData?: User) => void;
   signup: (data: SignupData) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -42,12 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       setIsLoading(false);
       return;
     }
-    
-    const storedToken = localStorage.getItem('token');
+
+    const storedToken = localStorage.getItem("token");
     if (storedToken) {
       setToken(storedToken);
       fetchUser(storedToken);
@@ -58,9 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = async (authToken: string) => {
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch("/api/auth/me", {
         headers: {
-          'Authorization': `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
         },
       });
 
@@ -68,15 +75,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setUser(data.user);
       } else {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token');
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("token");
         }
         setToken(null);
       }
     } catch (err) {
-      console.error('Failed to fetch user:', err);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
+      console.error("Failed to fetch user:", err);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
       }
       setToken(null);
     } finally {
@@ -87,52 +94,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setError(null);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.error || "Login failed");
       }
 
       setUser(data.user);
       setToken(data.token);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('token', data.token);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", data.token);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      const errorMessage = err instanceof Error ? err.message : "Login failed";
       setError(errorMessage);
       throw err;
+    }
+  };
+
+  const loginWithToken = (newToken: string, userData?: User) => {
+    setToken(newToken);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("token", newToken);
+    }
+    if (userData) {
+      setUser(userData);
+    } else {
+      fetchUser(newToken);
     }
   };
 
   const signup = async (signupData: SignupData) => {
     setError(null);
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(signupData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Signup failed');
+        throw new Error(data.error || "Signup failed");
       }
 
       setUser(data.user);
       setToken(data.token);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('token', data.token);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", data.token);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Signup failed';
+      const errorMessage = err instanceof Error ? err.message : "Signup failed";
       setError(errorMessage);
       throw err;
     }
@@ -141,13 +160,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setToken(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, signup, logout, isLoading, error }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        loginWithToken,
+        signup,
+        logout,
+        isLoading,
+        error,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -156,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

@@ -1,11 +1,14 @@
-import { NextApiResponse } from 'next';
-import prisma from '@/lib/prisma';
-import { withAuth, AuthenticatedRequest } from '@/lib/middleware';
-import { QuoteStatus, UserRole } from '@prisma/client';
-import { findMatchingPartners, notifyMatchedPartners } from '@/lib/matching-engine';
+import { NextApiResponse } from "next";
+import prisma from "@/lib/prisma";
+import { withAuth, AuthenticatedRequest } from "@/lib/middleware";
+import { QuoteStatus, UserRole } from "@prisma/client";
+import {
+  findMatchingPartners,
+  notifyMatchedPartners,
+} from "@/lib/matching-engine";
 
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
+  if (req.method === "GET") {
     try {
       const { status, limit = 50, offset = 0 } = req.query;
 
@@ -15,7 +18,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         where.traderId = req.user!.userId;
       }
 
-      if (status && typeof status === 'string') {
+      if (status && typeof status === "string") {
         where.status = status as QuoteStatus;
       }
 
@@ -39,7 +42,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         take: Number(limit),
         skip: Number(offset),
@@ -56,36 +59,56 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         },
       });
     } catch (error) {
-      console.error('Error fetching quotes:', error);
-      res.status(500).json({ error: 'Failed to fetch quotes' });
+      console.error("Error fetching quotes:", error);
+      res.status(500).json({ error: "Failed to fetch quotes" });
     }
-  } else if (req.method === 'POST') {
+  } else if (req.method === "POST") {
     try {
       if (req.user!.role !== UserRole.TRADER) {
         return res.status(403).json({
-          error: 'Only traders can create freight requests',
+          error: "Only traders can create freight requests",
         });
       }
 
       const quoteData = req.body;
 
-      if (!quoteData.cargoName || !quoteData.quantity || !quoteData.quantityUnit ||
-          !quoteData.cargoReadyDate || !quoteData.pickupAddress || !quoteData.pickupCity ||
-          !quoteData.pickupState || !quoteData.pickupPincode || !quoteData.deliveryAddress ||
-          !quoteData.deliveryCity || !quoteData.deliveryState || !quoteData.deliveryPincode ||
-          !quoteData.packagingType) {
+      console.log("[Quote Create] Received data:", {
+        bidId: quoteData.bidId,
+        cargoName: quoteData.cargoName,
+        quantity: quoteData.quantity,
+      });
+
+      if (
+        !quoteData.cargoName ||
+        !quoteData.quantity ||
+        !quoteData.quantityUnit ||
+        !quoteData.cargoReadyDate ||
+        !quoteData.pickupAddress ||
+        !quoteData.pickupCity ||
+        !quoteData.pickupState ||
+        !quoteData.pickupPincode ||
+        !quoteData.deliveryAddress ||
+        !quoteData.deliveryCity ||
+        !quoteData.deliveryState ||
+        !quoteData.deliveryPincode ||
+        !quoteData.packagingType
+      ) {
         return res.status(400).json({
-          error: 'Missing required fields. Please check all mandatory sections.',
+          error:
+            "Missing required fields. Please check all mandatory sections.",
         });
       }
 
       if (quoteData.isHazardous && !quoteData.hazardClass) {
         return res.status(400).json({
-          error: 'Hazard class is required for hazardous cargo',
+          error: "Hazard class is required for hazardous cargo",
         });
       }
 
-      const quoteNumber = `FRQ-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const quoteNumber = `FRQ-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)
+        .toUpperCase()}`;
 
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 48);
@@ -95,6 +118,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           quoteNumber,
           traderId: req.user!.userId,
           status: QuoteStatus.SUBMITTED,
+          bidId: quoteData.bidId || null,
+          counterpartyId: quoteData.counterpartyId || null,
           cargoName: quoteData.cargoName,
           casNumber: quoteData.casNumber || null,
           quantity: quoteData.quantity,
@@ -110,14 +135,14 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           pickupCity: quoteData.pickupCity,
           pickupState: quoteData.pickupState,
           pickupPincode: quoteData.pickupPincode,
-          pickupCountry: quoteData.pickupCountry || 'India',
+          pickupCountry: quoteData.pickupCountry || "India",
           pickupContactName: quoteData.pickupContactName || null,
           pickupContactPhone: quoteData.pickupContactPhone || null,
           deliveryAddress: quoteData.deliveryAddress,
           deliveryCity: quoteData.deliveryCity,
           deliveryState: quoteData.deliveryState,
           deliveryPincode: quoteData.deliveryPincode,
-          deliveryCountry: quoteData.deliveryCountry || 'India',
+          deliveryCountry: quoteData.deliveryCountry || "India",
           deliveryContactName: quoteData.deliveryContactName || null,
           deliveryContactPhone: quoteData.deliveryContactPhone || null,
           packagingType: quoteData.packagingType,
@@ -136,7 +161,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           additionalNotes: quoteData.additionalNotes || null,
           expiresAt,
           submittedAt: new Date(),
-        },
+        } as any,
         include: {
           trader: {
             select: {
@@ -152,18 +177,18 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         data: {
           userId: req.user!.userId,
           quoteId: quote.id,
-          action: 'CREATE',
-          entity: 'QUOTE',
+          action: "CREATE",
+          entity: "QUOTE",
           entityId: quote.id,
           changes: { quoteNumber: quote.quoteNumber },
         },
       });
 
       try {
-        const { sendWebhook } = await import('@/lib/webhook');
+        const { sendWebhook } = await import("@/lib/webhook");
         await sendWebhook(
-          process.env.WEBHOOK_URL || 'http://localhost:5000/api/webhooks',
-          'QUOTE_REQUESTED',
+          process.env.WEBHOOK_URL || "http://localhost:5000/api/webhooks",
+          "QUOTE_REQUESTED",
           {
             quoteId: quote.id,
             quoteNumber: quote.quoteNumber,
@@ -172,45 +197,48 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             pickupCity: quote.pickupCity,
             deliveryCity: quote.deliveryCity,
           }
-        ).catch(err => console.error('Webhook error:', err));
+        ).catch((err) => console.error("Webhook error:", err));
       } catch (webhookError) {
-        console.error('Error sending webhook:', webhookError);
+        console.error("Error sending webhook:", webhookError);
       }
 
       try {
         const matchedPartners = await findMatchingPartners(quote.id);
         await notifyMatchedPartners(quote.id, matchedPartners);
-        
+
         if (matchedPartners.length > 0) {
-          const { startQuoteTimer } = await import('@/lib/quote-timer');
+          const { startQuoteTimer } = await import("@/lib/quote-timer");
           const timerExpiresAt = await startQuoteTimer({
             quoteId: quote.id,
             timerDurationMinutes: 60,
             enableWarnings: true,
           });
-          
+
           await prisma.quote.update({
             where: { id: quote.id },
-            data: { 
+            data: {
               status: QuoteStatus.MATCHING,
               expiresAt: timerExpiresAt,
             },
           });
         }
       } catch (matchError) {
-        console.error('Error matching partners:', matchError);
+        console.error("Error matching partners:", matchError);
       }
 
       res.status(201).json({
         quote,
-        message: 'Freight request created successfully',
+        message: "Freight request created successfully",
       });
     } catch (error) {
-      console.error('Error creating quote:', error);
-      res.status(500).json({ error: 'Failed to create freight request' });
+      console.error("Error creating quote:", error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      res
+        .status(500)
+        .json({ error: "Failed to create freight request", details: errorMsg });
     }
   } else {
-    res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: "Method not allowed" });
   }
 }
 

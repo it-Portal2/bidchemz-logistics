@@ -11,6 +11,7 @@ enum KycStatus {
   VERIFIED
 }
 
+
 model User {
   id          String   @id @default(cuid())
   email       String   @unique
@@ -19,13 +20,14 @@ model User {
   role        UserRole
 
   // ✅ NEW FIELDS
-  shortId     String   @unique
-  kycStatus   KycStatus @default(PENDING)
+  shortId     String?   @unique
+  kycStatus   KycStatus? @default(PENDING)
 
   companyName String?
   gstin       String?
   isVerified  Boolean  @default(false)
   isActive    Boolean  @default(true)
+  platform    String?  @default("BIDCHEMZ_LOGISTICS")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -79,6 +81,8 @@ model Quote {
   quoteNumber           String        @unique
   status                QuoteStatus   @default(DRAFT)
   traderId              String
+  bidId                 String?       // Optional: BidChemz bid reference
+  counterpartyId        String?       // Optional: BidChemz counterparty reference
   cargoName             String
   casNumber             String?
   quantity              Float
@@ -477,8 +481,12 @@ enum OfferStatus {
 enum ShipmentStatus {
   BOOKED
   PICKUP_SCHEDULED
+  PICKED_UP
   IN_TRANSIT
+  OUT_FOR_DELIVERY
   DELIVERED
+  EXCEPTION
+  RETURNED
   CANCELLED
   DELAYED
 }

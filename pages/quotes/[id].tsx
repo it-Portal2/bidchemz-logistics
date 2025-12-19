@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Layout } from '@/components/layout/Layout';
-import { useAuth } from '@/contexts/AuthContext';
-import Card, { CardHeader, CardBody, CardTitle } from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
-import { CountdownTimer } from '@/components/CountdownTimer';
-import { DocumentUpload } from '@/components/DocumentUpload';
-import { useRouter } from 'next/router';
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { Layout } from "@/components/layout/Layout";
+import { useAuth } from "@/contexts/AuthContext";
+import Card, { CardHeader, CardBody, CardTitle } from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
+import { CountdownTimer } from "@/components/CountdownTimer";
+import { DocumentUpload } from "@/components/DocumentUpload";
+import { useRouter } from "next/router";
 
 export default function QuoteDetails() {
   const { user, token } = useAuth();
@@ -17,9 +17,11 @@ export default function QuoteDetails() {
 
   const [quote, setQuote] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'details' | 'offers' | 'documents'>('details');
-  const [sortBy, setSortBy] = useState<'price' | 'transit' | 'rating'>('price');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [activeTab, setActiveTab] = useState<
+    "details" | "offers" | "documents"
+  >("details");
+  const [sortBy, setSortBy] = useState<"price" | "transit" | "rating">("price");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   /* =========================
      Fetch Quote
@@ -40,7 +42,7 @@ export default function QuoteDetails() {
       const data = await res.json();
       setQuote(data.quote);
     } catch (err) {
-      console.error('Fetch quote failed:', err);
+      console.error("Fetch quote failed:", err);
       setQuote(null);
     } finally {
       setLoading(false);
@@ -57,7 +59,7 @@ export default function QuoteDetails() {
   /* =========================
      Derived Values (SAFE)
   ========================== */
-  const isTrader = user?.role === 'TRADER';
+  const isTrader = user?.role === "TRADER";
   const offersCount = quote?.offers?.length || 0;
 
   const sortedOffers = useMemo(() => {
@@ -68,18 +70,18 @@ export default function QuoteDetails() {
       let diff = 0;
 
       switch (sortBy) {
-        case 'price':
+        case "price":
           diff = a.price - b.price;
           break;
-        case 'transit':
+        case "transit":
           diff = a.transitDays - b.transitDays;
           break;
-        case 'rating':
+        case "rating":
           diff = (b.partner?.rating || 0) - (a.partner?.rating || 0);
           break;
       }
 
-      return sortOrder === 'asc' ? diff : -diff;
+      return sortOrder === "asc" ? diff : -diff;
     });
 
     return offers;
@@ -101,9 +103,7 @@ export default function QuoteDetails() {
   if (!quote) {
     return (
       <Layout>
-        <div className="py-12 text-center text-gray-600">
-          Quote not found
-        </div>
+        <div className="py-12 text-center text-gray-600">Quote not found</div>
       </Layout>
     );
   }
@@ -114,14 +114,13 @@ export default function QuoteDetails() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto">
-
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <Button variant="secondary" onClick={() => router.back()}>
             ← Back
           </Button>
 
-          {quote.expiresAt && quote.status === 'MATCHING' && (
+          {quote.expiresAt && quote.status === "MATCHING" && (
             <CountdownTimer expiresAt={quote.expiresAt} showSeconds />
           )}
         </div>
@@ -135,15 +134,19 @@ export default function QuoteDetails() {
                 <p className="text-gray-600">{quote.quoteNumber}</p>
               </div>
 
-              <Badge variant="primary">
-                {quote.status.replace('_', ' ')}
-              </Badge>
+              <Badge variant="primary">{quote.status.replace("_", " ")}</Badge>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <Info label="Quantity" value={`${quote.quantity} ${quote.quantityUnit}`} />
+              <Info
+                label="Quantity"
+                value={`${quote.quantity} ${quote.quantityUnit}`}
+              />
               <Info label="Packaging" value={quote.packagingType} />
-              <Info label="Ready Date" value={new Date(quote.cargoReadyDate).toLocaleDateString()} />
+              <Info
+                label="Ready Date"
+                value={new Date(quote.cargoReadyDate).toLocaleDateString()}
+              />
               <Info label="Offers" value={offersCount} highlight />
             </div>
           </CardBody>
@@ -151,14 +154,14 @@ export default function QuoteDetails() {
 
         {/* Tabs */}
         <div className="border-b mb-6 flex space-x-8">
-          {['details', 'offers', 'documents'].map(tab => (
+          {["details", "offers", "documents"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
               className={`pb-3 border-b-2 ${
                 activeTab === tab
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500'
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500"
               }`}
             >
               {tab.toUpperCase()}
@@ -167,23 +170,31 @@ export default function QuoteDetails() {
         </div>
 
         {/* DETAILS */}
-        {activeTab === 'details' && (
+        {activeTab === "details" && (
           <Card>
             <CardHeader>
               <CardTitle>Shipment Details</CardTitle>
             </CardHeader>
             <CardBody className="grid grid-cols-2 gap-4">
-              <Info label="From" value={`${quote.pickupCity}, ${quote.pickupState}`} />
-              <Info label="To" value={`${quote.deliveryCity}, ${quote.deliveryState}`} />
-              {quote.isHazardous && (
-                <Badge variant="danger">⚠ Hazardous</Badge>
+              {quote.bidId && (
+                <Info label="BidChemz Bid ID" value={quote.bidId} highlight />
               )}
+              <Info label="CAS Number" value={quote.casNumber || "N/A"} />
+              <Info
+                label="From"
+                value={`${quote.pickupCity}, ${quote.pickupState}`}
+              />
+              <Info
+                label="To"
+                value={`${quote.deliveryCity}, ${quote.deliveryState}`}
+              />
+              {quote.isHazardous && <Badge variant="danger">⚠ Hazardous</Badge>}
             </CardBody>
           </Card>
         )}
 
         {/* OFFERS */}
-        {activeTab === 'offers' && (
+        {activeTab === "offers" && (
           <div className="space-y-4">
             {offersCount === 0 ? (
               <Card>
@@ -196,7 +207,9 @@ export default function QuoteDetails() {
                 <Card key={offer.id}>
                   <CardBody className="flex justify-between items-center">
                     <div>
-                      <p className="font-semibold">{offer.partner?.companyName}</p>
+                      <p className="font-semibold">
+                        {offer.partner?.companyName}
+                      </p>
                       <p className="text-blue-600 font-bold">₹{offer.price}</p>
                       <p className="text-sm">{offer.transitDays} days</p>
                     </div>
@@ -204,7 +217,9 @@ export default function QuoteDetails() {
                     {isTrader && (
                       <Button
                         variant="primary"
-                        onClick={() => router.push(`/trader/offers?quoteId=${quoteId}`)}
+                        onClick={() =>
+                          router.push(`/trader/offers?quoteId=${quoteId}`)
+                        }
                       >
                         View
                       </Button>
@@ -217,7 +232,7 @@ export default function QuoteDetails() {
         )}
 
         {/* DOCUMENTS */}
-        {activeTab === 'documents' && (
+        {activeTab === "documents" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {isTrader && (
               <DocumentUpload
@@ -239,7 +254,9 @@ export default function QuoteDetails() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-center">No documents uploaded</p>
+                  <p className="text-gray-500 text-center">
+                    No documents uploaded
+                  </p>
                 )}
               </CardBody>
             </Card>
@@ -265,7 +282,7 @@ function Info({
   return (
     <div>
       <p className="text-sm text-gray-500">{label}</p>
-      <p className={`font-semibold ${highlight ? 'text-green-600' : ''}`}>
+      <p className={`font-semibold ${highlight ? "text-green-600" : ""}`}>
         {value}
       </p>
     </div>

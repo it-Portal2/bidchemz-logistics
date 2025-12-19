@@ -1,70 +1,128 @@
-import React, { useState } from 'react';
-import { Layout } from '@/components/layout/Layout';
-import { FormSection } from '@/components/forms/FormSection';
-import { FormField } from '@/components/forms/FormField';
-import { CheckboxGroup } from '@/components/forms/CheckboxGroup';
-import Button from '@/components/ui/Button';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/router';
-import { PackagingType, VehicleType, HazardClass } from '@prisma/client';
+import React, { useState, useEffect } from "react";
+import { Layout } from "@/components/layout/Layout";
+import { FormSection } from "@/components/forms/FormSection";
+import { FormField } from "@/components/forms/FormField";
+import { CheckboxGroup } from "@/components/forms/CheckboxGroup";
+import Button from "@/components/ui/Button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/router";
+import { PackagingType, VehicleType, HazardClass } from "@prisma/client";
+
+// Unit code mapping from BidChemz
+const UNIT_CODE_MAP: Record<number | string, string> = {
+  1: "MT",
+  2: "Kg",
+  3: "litre",
+  4: "mg",
+  MT: "MT",
+  Kg: "Kg",
+  litre: "litre",
+  mg: "mg",
+};
 
 export default function NewQuote() {
   const { user, token } = useAuth();
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFromBidChemz, setIsFromBidChemz] = useState(false);
 
   const [formData, setFormData] = useState({
-    cargoName: '',
-    casNumber: '',
-    quantity: '',
-    quantityUnit: 'MT',
+    bidId: "",
+    counterpartyId: "", // Hidden field for BidChemz counterparty reference
+    cargoName: "",
+    casNumber: "",
+    quantity: "",
+    quantityUnit: "MT",
     isHazardous: false,
-    hazardClass: '',
-    unNumber: '',
-    cargoReadyDate: '',
-    estimatedDeliveryDate: '',
-    pickupAddress: '',
-    pickupCity: '',
-    pickupState: '',
-    pickupPincode: '',
-    pickupCountry: 'India',
-    pickupContactName: '',
-    pickupContactPhone: '',
-    deliveryAddress: '',
-    deliveryCity: '',
-    deliveryState: '',
-    deliveryPincode: '',
-    deliveryCountry: 'India',
-    deliveryContactName: '',
-    deliveryContactPhone: '',
-    packagingType: '',
-    packagingDetails: '',
-    specialHandling: '',
+    hazardClass: "",
+    unNumber: "",
+    cargoReadyDate: "",
+    estimatedDeliveryDate: "",
+    pickupAddress: "",
+    pickupCity: "",
+    pickupState: "",
+    pickupPincode: "",
+    pickupCountry: "India",
+    pickupContactName: "",
+    pickupContactPhone: "",
+    deliveryAddress: "",
+    deliveryCity: "",
+    deliveryState: "",
+    deliveryPincode: "",
+    deliveryCountry: "India",
+    deliveryContactName: "",
+    deliveryContactPhone: "",
+    packagingType: "",
+    packagingDetails: "",
+    specialHandling: "",
     temperatureControlled: false,
-    temperatureMin: '',
-    temperatureMax: '',
+    temperatureMin: "",
+    temperatureMax: "",
     preferredVehicleType: [] as string[],
-    vehicleSpecifications: '',
+    vehicleSpecifications: "",
     insuranceRequired: false,
-    insuranceValue: '',
+    insuranceValue: "",
     msdsRequired: false,
-    paymentTerms: '',
-    billingAddress: '',
-    additionalNotes: '',
+    paymentTerms: "",
+    billingAddress: "",
+    additionalNotes: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Pre-fill form from SSO bid data stored in localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const ssoBidDataRaw = localStorage.getItem("sso_bid_data");
+    if (!ssoBidDataRaw) return;
+
+    try {
+      const ssoBidData = JSON.parse(ssoBidDataRaw);
+      const acceptedBid = ssoBidData.accepted_bid;
+
+      if (acceptedBid) {
+        setIsFromBidChemz(true);
+
+        // Map unit code to dropdown value
+        const unitValue = UNIT_CODE_MAP[acceptedBid.weight_unit] || "MT";
+
+        setFormData((prev) => ({
+          ...prev,
+          bidId: acceptedBid.short_id || "",
+          counterpartyId: ssoBidData.counterparty?.short_id || "",
+          cargoName: acceptedBid.product_name || "",
+          casNumber: acceptedBid.product_cas_number || "",
+          quantity: acceptedBid.order_quantity?.toString() || "",
+          quantityUnit: unitValue,
+        }));
+
+        console.log("[SSO Pre-fill] Form populated with bid data:", {
+          bidId: acceptedBid.short_id,
+          cargoName: acceptedBid.product_name,
+          quantity: acceptedBid.order_quantity,
+          unit: unitValue,
+        });
+      }
+    } catch (err) {
+      console.error("Error parsing SSO bid data:", err);
+    }
+  }, []);
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
 
     if (errors[name]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[name];
         return newErrors;
@@ -73,27 +131,42 @@ export default function NewQuote() {
   };
 
   const handleCheckboxGroupChange = (name: string, values: string[]) => {
-    setFormData(prev => ({ ...prev, [name]: values }));
+    setFormData((prev) => ({ ...prev, [name]: values }));
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.cargoName) newErrors.cargoName = 'Cargo name is required';
-    if (!formData.quantity) newErrors.quantity = 'Quantity is required';
-    if (!formData.quantityUnit) newErrors.quantityUnit = 'Quantity unit is required';
-    if (!formData.cargoReadyDate) newErrors.cargoReadyDate = 'Cargo ready date is required';
-    if (!formData.pickupAddress) newErrors.pickupAddress = 'Pickup address is required';
-    if (!formData.pickupCity) newErrors.pickupCity = 'Pickup city is required';
-    if (!formData.pickupState) newErrors.pickupState = 'Pickup state is required';
-    if (!formData.pickupPincode) newErrors.pickupPincode = 'Pickup pincode is required';
-    if (!formData.deliveryAddress) newErrors.deliveryAddress = 'Delivery address is required';
-    if (!formData.deliveryCity) newErrors.deliveryCity = 'Delivery city is required';
-    if (!formData.deliveryState) newErrors.deliveryState = 'Delivery state is required';
-    if (!formData.deliveryPincode) newErrors.deliveryPincode = 'Delivery pincode is required';
-    if (!formData.packagingType) newErrors.packagingType = 'Packaging type is required';
+    // For BidChemz platform users (isFromBidChemz), bidId is mandatory
+    if (isFromBidChemz && !formData.bidId) {
+      newErrors.bidId = "Bid ID is required for BidChemz orders";
+    }
+
+    if (!formData.cargoName) newErrors.cargoName = "Cargo name is required";
+    if (!formData.quantity) newErrors.quantity = "Quantity is required";
+    if (!formData.quantityUnit)
+      newErrors.quantityUnit = "Quantity unit is required";
+    if (!formData.cargoReadyDate)
+      newErrors.cargoReadyDate = "Cargo ready date is required";
+    if (!formData.pickupAddress)
+      newErrors.pickupAddress = "Pickup address is required";
+    if (!formData.pickupCity) newErrors.pickupCity = "Pickup city is required";
+    if (!formData.pickupState)
+      newErrors.pickupState = "Pickup state is required";
+    if (!formData.pickupPincode)
+      newErrors.pickupPincode = "Pickup pincode is required";
+    if (!formData.deliveryAddress)
+      newErrors.deliveryAddress = "Delivery address is required";
+    if (!formData.deliveryCity)
+      newErrors.deliveryCity = "Delivery city is required";
+    if (!formData.deliveryState)
+      newErrors.deliveryState = "Delivery state is required";
+    if (!formData.deliveryPincode)
+      newErrors.deliveryPincode = "Delivery pincode is required";
+    if (!formData.packagingType)
+      newErrors.packagingType = "Packaging type is required";
     if (formData.isHazardous && !formData.hazardClass) {
-      newErrors.hazardClass = 'Hazard class is required for hazardous cargo';
+      newErrors.hazardClass = "Hazard class is required for hazardous cargo";
     }
 
     setErrors(newErrors);
@@ -110,31 +183,42 @@ export default function NewQuote() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/quotes', {
-        method: 'POST',
+      const response = await fetch("/api/quotes", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           ...formData,
           quantity: parseFloat(formData.quantity),
-          temperatureMin: formData.temperatureMin ? parseFloat(formData.temperatureMin) : null,
-          temperatureMax: formData.temperatureMax ? parseFloat(formData.temperatureMax) : null,
-          insuranceValue: formData.insuranceValue ? parseFloat(formData.insuranceValue) : null,
+          temperatureMin: formData.temperatureMin
+            ? parseFloat(formData.temperatureMin)
+            : null,
+          temperatureMax: formData.temperatureMax
+            ? parseFloat(formData.temperatureMax)
+            : null,
+          insuranceValue: formData.insuranceValue
+            ? parseFloat(formData.insuranceValue)
+            : null,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create quote');
+        throw new Error(data.error || "Failed to create quote");
+      }
+
+      // Clear SSO bid data from localStorage after successful submission
+      if (isFromBidChemz) {
+        localStorage.removeItem("sso_bid_data");
       }
 
       router.push(`/quotes/${data.quote.id}`);
     } catch (error) {
-      console.error('Error creating quote:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create quote');
+      console.error("Error creating quote:", error);
+      alert(error instanceof Error ? error.message : "Failed to create quote");
     } finally {
       setIsSubmitting(false);
     }
@@ -144,7 +228,9 @@ export default function NewQuote() {
     return (
       <Layout>
         <div className="text-center py-12">
-          <p className="text-gray-600">Please log in to create a freight request</p>
+          <p className="text-gray-600">
+            Please log in to create a freight request
+          </p>
         </div>
       </Layout>
     );
@@ -153,14 +239,30 @@ export default function NewQuote() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">New Freight Request</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">
+          New Freight Request
+        </h1>
 
         <form onSubmit={handleSubmit}>
           <FormSection
             title="1. Shipment Information"
             description="Basic details about your cargo"
           >
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                label="Bid ID"
+                name="bidId"
+                value={formData.bidId}
+                onChange={handleChange}
+                error={errors.bidId}
+                placeholder="e.g., sell_bid_IoTho6gMTIU"
+                helperText={
+                  isFromBidChemz
+                    ? "Pre-filled from BidChemz (locked)"
+                    : "Required for BidChemz users"
+                }
+                disabled={isFromBidChemz}
+              />
               <FormField
                 label="Cargo Name"
                 name="cargoName"
@@ -198,9 +300,10 @@ export default function NewQuote() {
                 value={formData.quantityUnit}
                 onChange={handleChange}
                 options={[
-                  { label: 'MT (Metric Ton)', value: 'MT' },
-                  { label: 'KG (Kilogram)', value: 'KG' },
-                  { label: 'Litre', value: 'Litre' },
+                  { label: "MT (Metric Ton)", value: "MT" },
+                  { label: "Kg (Kilogram)", value: "Kg" },
+                  { label: "Litre", value: "litre" },
+                  { label: "mg (Milligram)", value: "mg" },
                 ]}
                 required
               />
@@ -213,7 +316,10 @@ export default function NewQuote() {
                   onChange={handleChange}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isHazardous" className="ml-2 text-sm text-gray-700">
+                <label
+                  htmlFor="isHazardous"
+                  className="ml-2 text-sm text-gray-700"
+                >
                   Hazardous Cargo
                 </label>
               </div>
@@ -228,8 +334,8 @@ export default function NewQuote() {
                   value={formData.hazardClass}
                   onChange={handleChange}
                   error={errors.hazardClass}
-                  options={Object.values(HazardClass).map(hc => ({
-                    label: hc.replace('_', ' '),
+                  options={Object.values(HazardClass).map((hc) => ({
+                    label: hc.replace("_", " "),
                     value: hc,
                   }))}
                   required
@@ -387,8 +493,8 @@ export default function NewQuote() {
               value={formData.packagingType}
               onChange={handleChange}
               error={errors.packagingType}
-              options={Object.values(PackagingType).map(pt => ({
-                label: pt.replace('_', ' '),
+              options={Object.values(PackagingType).map((pt) => ({
+                label: pt.replace("_", " "),
                 value: pt,
               }))}
               required
@@ -419,7 +525,10 @@ export default function NewQuote() {
                 onChange={handleChange}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <label htmlFor="temperatureControlled" className="ml-2 text-sm text-gray-700">
+              <label
+                htmlFor="temperatureControlled"
+                className="ml-2 text-sm text-gray-700"
+              >
                 Temperature Controlled
               </label>
             </div>
@@ -454,9 +563,11 @@ export default function NewQuote() {
               label="Preferred Vehicle Types"
               name="preferredVehicleType"
               value={formData.preferredVehicleType}
-              onChange={(values) => handleCheckboxGroupChange('preferredVehicleType', values)}
-              options={Object.values(VehicleType).map(vt => ({
-                label: vt.replace('_', ' '),
+              onChange={(values) =>
+                handleCheckboxGroupChange("preferredVehicleType", values)
+              }
+              options={Object.values(VehicleType).map((vt) => ({
+                label: vt.replace("_", " "),
                 value: vt,
               }))}
             />
@@ -484,7 +595,10 @@ export default function NewQuote() {
                   onChange={handleChange}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="insuranceRequired" className="ml-2 text-sm text-gray-700">
+                <label
+                  htmlFor="insuranceRequired"
+                  className="ml-2 text-sm text-gray-700"
+                >
                   Insurance Required
                 </label>
               </div>
@@ -510,7 +624,10 @@ export default function NewQuote() {
                   onChange={handleChange}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="msdsRequired" className="ml-2 text-sm text-gray-700">
+                <label
+                  htmlFor="msdsRequired"
+                  className="ml-2 text-sm text-gray-700"
+                >
                   MSDS/SDS Required
                 </label>
               </div>
@@ -561,12 +678,8 @@ export default function NewQuote() {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Freight Request'}
+            <Button type="submit" variant="primary" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit Freight Request"}
             </Button>
           </div>
         </form>

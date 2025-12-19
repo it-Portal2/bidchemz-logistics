@@ -1,23 +1,23 @@
-import { NextApiResponse } from 'next';
-import prisma from '@/lib/prisma';
-import { withAuth, AuthenticatedRequest } from '@/lib/middleware';
+import { NextApiResponse } from "next";
+import prisma from "@/lib/prisma";
+import { withAuth, AuthenticatedRequest } from "@/lib/middleware";
 import {
   UserRole,
   OfferStatus,
   QuoteStatus,
   LeadType,
   TransactionType,
-} from '@prisma/client';
+} from "@prisma/client";
 
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { id } = req.query;
 
-  if (typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid offer ID' });
+  if (typeof id !== "string") {
+    return res.status(400).json({ error: "Invalid offer ID" });
   }
 
   try {
@@ -25,7 +25,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
        AUTHORIZATION
     ======================= */
     if (req.user!.role !== UserRole.TRADER) {
-      return res.status(403).json({ error: 'Only traders can select offers' });
+      return res.status(403).json({ error: "Only traders can select offers" });
     }
 
     const offer = await prisma.offer.findUnique({
@@ -42,23 +42,23 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     });
 
     if (!offer) {
-      return res.status(404).json({ error: 'Offer not found' });
+      return res.status(404).json({ error: "Offer not found" });
     }
 
     if (offer.quote.traderId !== req.user!.userId) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ error: "Access denied" });
     }
 
     if (offer.status !== OfferStatus.PENDING) {
       return res.status(400).json({
-        error: 'Offer already processed',
+        error: "Offer already processed",
       });
     }
 
     const wallet = offer.partner.leadWallet;
     if (!wallet) {
       return res.status(400).json({
-        error: 'Partner does not have a lead wallet',
+        error: "Partner does not have a lead wallet",
       });
     }
 
@@ -68,16 +68,16 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
        TRANSACTION
     ======================= */
     const result = await prisma.$transaction(async (tx) => {
-      // 🔒 Lock wallet
+      //  Lock wallet
       const currentWallet = await tx.leadWallet.findUnique({
         where: { id: wallet.id },
       });
 
       if (!currentWallet || currentWallet.balance < leadCost) {
-        throw new Error('Insufficient wallet balance');
+        throw new Error("Insufficient wallet balance");
       }
 
-      // ✅ Prevent double debit (VERY IMPORTANT)
+      // Prevent double debit (VERY IMPORTANT)
       const existingTransaction = await tx.leadTransaction.findUnique({
         where: { offerId: offer.id },
       });
@@ -132,7 +132,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             description: `Lead charge for quote ${offer.quote.quoteNumber}`,
             leadId: `LEAD-${Date.now()}`,
             leadType:
-              offer.partner.partnerCapability?.subscriptionTier === 'PREMIUM'
+              offer.partner.partnerCapability?.subscriptionTier === "PREMIUM"
                 ? LeadType.EXCLUSIVE
                 : LeadType.SHARED,
             leadCost,
@@ -143,6 +143,20 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         });
       }
 
+      // Calculate estimated delivery
+      const estimatedDelivery = new Date();
+      estimatedDelivery.setDate(
+        estimatedDelivery.getDate() + offer.transitDays
+      );
+
+      // Initial tracking event
+      const initialEvent = {
+        status: "BOOKED",
+        location: offer.quote.pickupCity,
+        timestamp: new Date().toISOString(),
+        description: "Shipment booked via BidChemz Logistics",
+      };
+
       // 🚚 Create shipment (safe – offerId is unique here)
       const shipment = await tx.shipment.create({
         data: {
@@ -152,8 +166,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             .toUpperCase()}`,
           quoteId: offer.quoteId,
           offerId: offer.id,
-          statusUpdates: [],
-          trackingEvents: [],
+          status: "BOOKED",
+          estimatedDelivery,
+          statusUpdates: [initialEvent],
+          trackingEvents: [initialEvent],
         },
       });
 
@@ -167,8 +183,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       data: {
         userId: req.user!.userId,
         quoteId: offer.quoteId,
-        action: 'SELECT_OFFER',
-        entity: 'OFFER',
+        action: "SELECT_OFFER",
+        entity: "OFFER",
         entityId: offer.id,
         changes: {
           partnerId: offer.partnerId,
@@ -178,17 +194,17 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     });
 
     return res.status(200).json({
-      message: 'Offer selected successfully',
+      message: "Offer selected successfully",
       shipment: result.shipment,
     });
   } catch (error) {
-    console.error('Error selecting offer:', error);
+    console.error("Error selecting offer:", error);
 
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });
     }
 
-    return res.status(500).json({ error: 'Failed to select offer' });
+    return res.status(500).json({ error: "Failed to select offer" });
   }
 }
 
@@ -200,7 +216,7 @@ function calculateLeadCost(offer: any): number {
 
   if (offer.quote.isHazardous) baseCost *= 1.5;
   if (offer.quote.quantity > 20) baseCost *= 1.3;
-  if (offer.partner.partnerCapability?.subscriptionTier === 'PREMIUM') {
+  if (offer.partner.partnerCapability?.subscriptionTier === "PREMIUM") {
     baseCost *= 2;
   }
 
