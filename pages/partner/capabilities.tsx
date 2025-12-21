@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
@@ -66,13 +67,13 @@ export default function PartnerCapabilities() {
       });
 
       if (response.ok) {
-        alert('Capabilities updated successfully!');
+        toast.success('Capabilities updated successfully!');
       } else {
-        alert('Failed to update capabilities');
+        toast.error('Failed to update capabilities');
       }
     } catch (error) {
       console.error('Error saving capabilities:', error);
-      alert('Failed to update capabilities');
+      toast.error('Failed to update capabilities');
     } finally {
       setSaving(false);
     }

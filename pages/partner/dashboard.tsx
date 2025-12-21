@@ -40,6 +40,8 @@ export default function PartnerDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState({
     activeOffers: 0,
+    acceptedOffers: 0,
+    rejectedOffers: 0,
     totalLeads: 0,
     walletBalance: 0,
     acceptanceRate: 0,
@@ -48,12 +50,12 @@ export default function PartnerDashboard() {
   });
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [recentActivity, setRecentActivity] = useState([
-    { id: 1, type: 'offer_submitted', title: 'Offer Submitted', description: 'Corrosive chemicals - Mumbai to Delhi', time: '2 hours ago', color: 'blue', icon: '📤' },
-    { id: 2, type: 'offer_accepted', title: 'Offer Accepted', description: 'Sulfuric Acid transport - ₹95,000', time: '5 hours ago', color: 'green', icon: '✅' },
-    { id: 3, type: 'lead_fee', title: 'Lead Fee Deducted', description: '₹500 deducted from wallet', time: '5 hours ago', color: 'orange', icon: '💰' },
-    { id: 4, type: 'new_lead', title: 'New Lead Available', description: 'Flammable liquid - Pune to Surat', time: '1 day ago', color: 'purple', icon: '🆕' },
-  ]);
+  const [earningsChartData, setEarningsChartData] = useState<any>(null);
+  const [performanceChartData, setPerformanceChartData] = useState<any>(null);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [rawOffers, setRawOffers] = useState<any[]>([]);
+  const [timeFilter, setTimeFilter] = useState('6M');
+  const [showTimeFilter, setShowTimeFilter] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'LOGISTICS_PARTNER') {
@@ -66,7 +68,7 @@ export default function PartnerDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [offersRes, walletRes, quotesRes] = await Promise.all([
+      const [offersRes, walletRes, quotesRes, activityRes] = await Promise.all([
         fetch('/api/offers', {
           headers: { 'Authorization': `Bearer ${token}` },
         }),
@@ -76,18 +78,28 @@ export default function PartnerDashboard() {
         fetch('/api/quotes?status=MATCHING&status=OFFERS_AVAILABLE', {
           headers: { 'Authorization': `Bearer ${token}` },
         }),
+        fetch('/api/partner/activity', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        }),
       ]);
 
       const offersData = await offersRes.json();
       const walletData = await walletRes.json();
       const quotesData = await quotesRes.json();
+      const activityData = await activityRes.json();
 
       const offers = offersData.offers || [];
-      const selectedOffers = offers.filter((o: any) => o.status === 'SELECTED');
+      setRawOffers(offers);
+      const selectedOffers = offers.filter((o: any) => o.status === 'SELECTED' || o.status === 'ACCEPTED');
+      const rejectedOffers = offers.filter((o: any) => o.status === 'REJECTED');
+      const pendingOffers = offers.filter((o: any) => o.status === 'PENDING');
+
       const totalEarnings = selectedOffers.reduce((sum: number, o: any) => sum + (o.price || 0), 0);
-      
+
       setStats({
-        activeOffers: offers.filter((o: any) => o.status === 'PENDING').length,
+        activeOffers: pendingOffers.length,
+        acceptedOffers: selectedOffers.length,
+        rejectedOffers: rejectedOffers.length,
         totalLeads: offers.length,
         walletBalance: walletData.wallet?.balance || 0,
         acceptanceRate: offers.length > 0 ? Math.round((selectedOffers.length / offers.length) * 100) : 0,
@@ -96,6 +108,46 @@ export default function PartnerDashboard() {
       });
 
       setQuotes(quotesData.quotes || []);
+      setRecentActivity(activityData.activities || []);
+
+      // Calculate Weekly Earnings (Last 7 Days)
+      const last7Days: string[] = [];
+      const earningsByDay: number[] = [];
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        last7Days.push(new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(d));
+
+        const dayStart = new Date(d.setHours(0, 0, 0, 0)).getTime();
+        const dayEnd = new Date(d.setHours(23, 59, 59, 999)).getTime();
+
+        const dayEarnings = selectedOffers
+          .filter((o: any) => {
+            const dateValue = o.createdAt ?? o.submittedAt;
+            if (!dateValue) return false;
+            const t = new Date(dateValue).getTime();
+            return t >= dayStart && t <= dayEnd;
+          })
+          .reduce((sum: number, o: any) => sum + (o.price || 0), 0);
+
+        earningsByDay.push(dayEarnings);
+      }
+
+      setEarningsChartData({
+        labels: last7Days,
+        datasets: [
+          {
+            label: 'Earnings (₹)',
+            data: earningsByDay,
+            borderColor: 'rgb(34, 197, 94)',
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            fill: true,
+            tension: 0.4,
+          },
+        ],
+      });
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -103,25 +155,87 @@ export default function PartnerDashboard() {
     }
   };
 
-  const earningsChartData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [
-      {
-        label: 'Earnings (₹)',
-        data: [12000, 19000, 15000, 25000, 22000, 30000, 28000],
-        borderColor: 'rgb(34, 197, 94)',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-        fill: true,
-        tension: 0.4,
-      },
-    ],
-  };
+  useEffect(() => {
+    if (rawOffers.length === 0 && !loading) return;
+
+    const selectedOffers = rawOffers.filter((o: any) => o.status === 'SELECTED' || o.status === 'ACCEPTED');
+    const rejectedOffers = rawOffers.filter((o: any) => o.status === 'REJECTED');
+
+    const labels: string[] = [];
+    const winsByPeriod: number[] = [];
+    const lossesByPeriod: number[] = [];
+
+    const now = new Date();
+    let monthsToProcess = 6;
+
+    if (timeFilter === '3M') monthsToProcess = 3;
+    if (timeFilter === '6M') monthsToProcess = 6;
+    if (timeFilter === '12M') monthsToProcess = 12;
+    if (timeFilter === 'LIFETIME') {
+      // Find oldest offer
+      if (rawOffers.length > 0) {
+        const oldest = rawOffers.reduce((oldest: number, current: any) => {
+          const date = new Date(current.createdAt).getTime();
+          return date < oldest ? date : oldest;
+        }, now.getTime());
+
+        const diffMonths = (now.getFullYear() - new Date(oldest).getFullYear()) * 12 + (now.getMonth() - new Date(oldest).getMonth());
+        monthsToProcess = Math.max(diffMonths + 1, 1);
+      } else {
+        monthsToProcess = 1;
+      }
+    }
+
+    for (let i = monthsToProcess - 1; i >= 0; i--) {
+      const base = new Date();
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+
+      labels.push(
+        d.toLocaleString('en-US', { month: 'short' })
+      );
+
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).getTime();
+
+      const wins = selectedOffers.filter((o: any) => {
+        const t = new Date(o.createdAt ?? o.submittedAt).getTime();
+        return t >= monthStart && t <= monthEnd;
+      }).length;
+
+      const losses = rejectedOffers.filter((o: any) => {
+        const t = new Date(o.createdAt ?? o.submittedAt).getTime();
+        return t >= monthStart && t <= monthEnd;
+      }).length;
+
+      winsByPeriod.push(wins);
+      lossesByPeriod.push(losses);
+
+    }
+
+
+    setPerformanceChartData({
+      labels,
+      datasets: [
+        {
+          label: 'Leads Won',
+          data: winsByPeriod,
+          backgroundColor: 'rgba(34, 197, 94, 0.7)',
+        },
+        {
+          label: 'Leads Lost',
+          data: lossesByPeriod,
+          backgroundColor: 'rgba(239, 68, 68, 0.7)',
+        },
+      ],
+    });
+
+  }, [rawOffers, timeFilter, loading]);
 
   const offersStatusData = {
     labels: ['Pending', 'Accepted', 'Rejected'],
     datasets: [
       {
-        data: [stats.activeOffers || 3, stats.totalLeads - stats.activeOffers || 8, 2],
+        data: [stats.activeOffers, stats.acceptedOffers, stats.rejectedOffers],
         backgroundColor: [
           'rgba(59, 130, 246, 0.8)',
           'rgba(34, 197, 94, 0.8)',
@@ -132,36 +246,17 @@ export default function PartnerDashboard() {
     ],
   };
 
-  const performanceData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: 'Leads Won',
-        data: [3, 5, 4, 7, 6, 8],
-        backgroundColor: 'rgba(34, 197, 94, 0.7)',
-      },
-      {
-        label: 'Leads Lost',
-        data: [2, 3, 2, 1, 2, 1],
-        backgroundColor: 'rgba(239, 68, 68, 0.7)',
-      },
-    ],
-  };
-
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
     },
     scales: {
-      y: {
-        beginAtZero: true,
-      },
+      y: { beginAtZero: true },
     },
   };
+
 
   const doughnutOptions = {
     responsive: true,
@@ -301,17 +396,65 @@ export default function PartnerDashboard() {
               <Badge variant="success">+18%</Badge>
             </div>
             <div style={{ height: '250px' }}>
-              <Line data={earningsChartData} options={chartOptions} />
+              {earningsChartData && <Line data={earningsChartData} options={chartOptions} />}
             </div>
           </Card>
 
           <Card>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900">Win/Loss Ratio</h3>
-              <Badge variant="primary">Last 6 Months</Badge>
+              <div className="relative inline-block text-left">
+                <div>
+                  <button
+                    type="button"
+                    className="inline-flex justify-center w-full rounded-full border border-gray-300 shadow-sm px-4 py-1.5 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={() => setShowTimeFilter(!showTimeFilter)}
+                    onBlur={() => setTimeout(() => setShowTimeFilter(false), 200)}
+                  >
+                    {timeFilter === '3M' ? 'Last 3 Months' :
+                      timeFilter === '6M' ? 'Last 6 Months' :
+                        timeFilter === '12M' ? 'Last 12 Months' : 'Lifetime'}
+                    <svg className="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+
+                {showTimeFilter && (
+                  <div className="origin-top-right absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                    <div className="py-1" role="menu" aria-orientation="vertical">
+                      {[
+                        { value: '3M', label: 'Last 3 Months' },
+                        { value: '6M', label: 'Last 6 Months' },
+                        { value: '12M', label: 'Last 12 Months' },
+                        { value: 'LIFETIME', label: 'Lifetime' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          className={`block w-full text-left px-4 py-2 text-sm ${timeFilter === opt.value ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setTimeFilter(opt.value);
+                            setShowTimeFilter(false);
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <div style={{ height: '250px' }}>
-              <Bar data={performanceData} options={chartOptions} />
+              {performanceChartData && (
+                <Bar
+                  redraw
+                  data={performanceChartData}
+                  options={chartOptions}
+                />
+              )}
+
             </div>
           </Card>
         </div>
@@ -334,7 +477,7 @@ export default function PartnerDashboard() {
                 </Link>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {quotes.length === 0 ? (
                   <EmptyState
                     icon="🚚"
@@ -344,7 +487,7 @@ export default function PartnerDashboard() {
                     actionHref="/partner/capabilities"
                   />
                 ) : (
-                  quotes.slice(0, 3).map((quote: any) => (
+                  quotes.map((quote: any) => (
                     <div key={quote.id} className="border-2 border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-lg transition-all bg-white">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
@@ -416,19 +559,34 @@ export default function PartnerDashboard() {
               <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
               <Badge variant="primary">{recentActivity.length} new</Badge>
             </div>
-            <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl bg-${activity.color}-100`}>
-                    {activity.icon}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 text-sm">{activity.title}</h4>
-                    <p className="text-xs text-gray-600 mt-1">{activity.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                  </div>
+            <div className="space-y-4 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {recentActivity.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  No recent activity found.
                 </div>
-              ))}
+              ) : (
+                recentActivity.map((activity) => {
+                  const colorClasses: { [key: string]: string } = {
+                    blue: 'bg-blue-100',
+                    green: 'bg-green-100',
+                    red: 'bg-red-100',
+                    orange: 'bg-orange-100',
+                    purple: 'bg-purple-100',
+                  };
+                  return (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${colorClasses[activity.color] || 'bg-gray-100'}`}>
+                        {activity.icon}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 text-sm">{activity.title}</h4>
+                        <p className="text-xs text-gray-600 mt-1">{activity.description}</p>
+                        <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
             <div className="mt-4">
               <Button variant="ghost" fullWidth size="sm">

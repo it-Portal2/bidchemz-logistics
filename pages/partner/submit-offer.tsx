@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import { Layout } from '@/components/layout/Layout';
 import Card, { CardHeader, CardBody, CardTitle } from '@/components/ui/Card';
@@ -80,7 +81,7 @@ export default function SubmitOffer() {
       });
       const data = await res.json();
       if (res.ok) setWallet(data.wallet);
-    } catch {}
+    } catch { }
   };
 
   const calculateEstimatedCost = async (quoteId: string) => {
@@ -98,7 +99,7 @@ export default function SubmitOffer() {
       if (res.ok) {
         setEstimatedCost(data.estimatedLeadCost);
       }
-    } catch {}
+    } catch { }
   };
 
   /* =======================
@@ -122,7 +123,7 @@ export default function SubmitOffer() {
     if (!quote || !wallet) return;
 
     if (wallet.balance < estimatedCost) {
-      alert('Insufficient wallet balance');
+      toast.error('Insufficient wallet balance');
       return;
     }
 
@@ -153,12 +154,21 @@ export default function SubmitOffer() {
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('Server response:', text);
+        throw new Error('Server returned an invalid or HTML response');
+      }
+
       if (!res.ok) throw new Error(data.error || 'Submission failed');
 
+      toast.success('Offer submitted successfully!');
       router.push('/partner/dashboard');
     } catch (err: any) {
-      alert(err.message || 'Failed to submit offer');
+      toast.error(err.message || 'Failed to submit offer');
     } finally {
       setSubmitting(false);
     }

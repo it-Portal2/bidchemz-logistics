@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Layout } from '@/components/layout/Layout';
 import Card, { CardHeader, CardBody, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -104,12 +105,12 @@ export default function PartnerWallet() {
   const handleRecharge = async () => {
     const amount = parseFloat(rechargeForm.amount);
     if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount');
+      toast.error('Please enter a valid amount');
       return;
     }
 
     if (!rechargeForm.paymentMethod) {
-      alert('Please select a payment method');
+      toast.error('Please select a payment method');
       return;
     }
 
@@ -136,7 +137,7 @@ export default function PartnerWallet() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccessMessage('Payment request submitted successfully! Admin will review and approve your recharge.');
+        toast.success('Payment request submitted successfully! Admin will review and approve your recharge.');
         setRechargeForm({
           amount: '',
           paymentMethod: 'BANK_TRANSFER',
@@ -148,10 +149,10 @@ export default function PartnerWallet() {
         setShowRechargeModal(false);
         fetchPaymentRequests();
       } else {
-        alert(data.error || 'Failed to submit payment request');
+        toast.error(data.error || 'Failed to submit payment request');
       }
     } catch (error) {
-      alert('Failed to submit payment request');
+      toast.error('Failed to submit payment request');
     } finally {
       setProcessing(false);
     }
@@ -160,7 +161,7 @@ export default function PartnerWallet() {
   const handleUpdateSettings = async () => {
     const threshold = parseFloat(alertThreshold);
     if (isNaN(threshold) || threshold < 0) {
-      alert('Please enter a valid threshold');
+      toast.error('Please enter a valid threshold');
       return;
     }
 
@@ -179,14 +180,14 @@ export default function PartnerWallet() {
       });
 
       if (response.ok) {
-        alert('Settings updated successfully');
+        toast.success('Settings updated successfully');
         fetchWallet();
       } else {
         const data = await response.json();
-        alert(data.error || 'Update failed');
+        toast.error(data.error || 'Update failed');
       }
     } catch (error) {
-      alert('Update failed');
+      toast.error('Update failed');
     } finally {
       setProcessing(false);
     }
@@ -229,11 +230,7 @@ export default function PartnerWallet() {
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Lead Wallet</h1>
 
-        {successMessage && (
-          <Alert type="success" className="mb-6">
-            {successMessage}
-          </Alert>
-        )}
+
 
         {isLowBalance && (
           <Alert type="warning" className="mb-6">
@@ -405,13 +402,12 @@ export default function PartnerWallet() {
                         {new Date(transaction.transactionDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                          transaction.transactionType === 'CREDIT'
+                        <span className={`px-2 py-1 text-xs font-semibold rounded ${transaction.transactionType === 'CREDIT'
                             ? 'bg-green-100 text-green-800'
                             : transaction.transactionType === 'DEBIT'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
                           {transaction.transactionType}
                         </span>
                       </td>
