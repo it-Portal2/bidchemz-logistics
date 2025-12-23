@@ -17,6 +17,12 @@ export const prisma =
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+  // Debug logging to verify models
+  console.log('Prisma initialized. Models:', Object.keys(prisma).filter(k => !k.startsWith('$') && !k.startsWith('_')));
+}
+
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export default prisma;

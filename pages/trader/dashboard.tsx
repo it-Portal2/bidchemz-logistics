@@ -206,8 +206,8 @@ export default function TraderDashboard() {
                     actionHref="/quotes/new"
                   />
                 ) : (
-                  <div className="divide-y divide-gray-200">
-                    {quotes.slice(0, 5).map((quote) => (
+                  <div className="h-[400px] overflow-y-auto divide-y divide-gray-200">
+                    {quotes.map((quote) => (
                       <div
                         key={quote.id}
                         className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
@@ -224,10 +224,10 @@ export default function TraderDashboard() {
                                   quote.status === "SELECTED"
                                     ? "success"
                                     : quote.status === "OFFERS_AVAILABLE"
-                                    ? "primary"
-                                    : quote.status === "MATCHING"
-                                    ? "warning"
-                                    : "neutral"
+                                      ? "primary"
+                                      : quote.status === "MATCHING"
+                                        ? "warning"
+                                        : "neutral"
                                 }
                               >
                                 {quote.status}

@@ -29,8 +29,22 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             select: { id: true, email: true, companyName: true },
           },
           offers: {
-            select: { id: true, price: true, status: true, partnerId: true },
+            select: {
+              id: true,
+              price: true,
+              status: true,
+              partnerId: true,
+              transitDays: true,
+              partner: {
+                select: {
+                  companyName: true,
+                  email: true,
+                  phone: true,
+                },
+              },
+            },
           },
+          documents: true,
         },
       });
 

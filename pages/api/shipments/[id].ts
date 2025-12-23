@@ -126,10 +126,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
               destination_city: updatedShipment.quote.deliveryCity,
               estimated_delivery: updatedShipment.estimatedDelivery,
               tracking_events: updatedShipment.trackingEvents,
-              tracking_url: `${
-                process.env.NEXT_PUBLIC_APP_URL ||
+              tracking_url: `${process.env.NEXT_PUBLIC_APP_URL ||
                 "https://logistics.bidchemz.com"
-              }/trader/shipments/${updatedShipment.id}`,
+                }/trader/shipments/${updatedShipment.id}`,
             };
 
             console.log(`[BidChemz Webhook] Sending to: ${bidChemzWebhookUrl}`);
@@ -158,6 +157,23 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           } catch (bidChemzWebhookError) {
             console.error("[BidChemz Webhook] Error:", bidChemzWebhookError);
           }
+        }
+      }
+
+      // 🔔 Notify Trader about shipment update
+      if (status || currentLocation) {
+        try {
+          await prisma.notification.create({
+            data: {
+              userId: updatedShipment.quote.traderId,
+              title: `Shipment Update: ${updatedShipment.shipmentNumber}`,
+              message: `Shipment updated to ${status || updatedShipment.status}${currentLocation ? ` at ${currentLocation}` : ""}.`,
+              priority: "MEDIUM",
+              type: "SHIPMENT_UPDATE",
+            },
+          });
+        } catch (notificationError) {
+          console.error("Error creating notification:", notificationError);
         }
       }
 

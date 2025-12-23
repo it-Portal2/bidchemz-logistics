@@ -48,7 +48,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             select: {
               id: true,
               email: true,
+              phone: true,
               companyName: true,
+              gstin: true,
+              isVerified: true,
             },
           },
           shipment: {
@@ -56,6 +59,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
               id: true,
               shipmentNumber: true,
               status: true,
+              rating: true,
+              feedback: true,
             },
           },
         },
@@ -332,6 +337,22 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         ).catch((err) => console.error("Webhook error:", err));
       } catch (webhookError) {
         console.error("Error sending webhook:", webhookError);
+      }
+
+      // 🔔 Notify Trader about new offer
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: quote.traderId,
+            title: "New Offer Received",
+            message: `New offer of ₹${result.offer.price} from ${result.offer.partner.companyName || "Logistics Partner"
+              } for quote #${quote.quoteNumber}`,
+            priority: "HIGH",
+            type: "OFFER_RECEIVED",
+          },
+        });
+      } catch (notificationError) {
+        console.error("Error creating notification:", notificationError);
       }
 
       res.status(201).json({

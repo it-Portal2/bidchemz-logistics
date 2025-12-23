@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -41,6 +42,7 @@ model User {
   paymentRequests         PaymentRequest[]
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
+  notifications           Notification[]
 
   @@index([email])
   @@index([role])
@@ -182,6 +184,9 @@ model Shipment {
   podDocument        String?
   podUploadedAt      DateTime?
   deliveryNotes      String?
+  rating             Int?
+  feedback           String?
+  reviewedAt         DateTime?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   auditLogs          AuditLog[]
@@ -413,6 +418,31 @@ model PaymentRequest {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+}
+
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  priority  NotificationPriority @default(MEDIUM)
+  type      String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 enum UserRole {

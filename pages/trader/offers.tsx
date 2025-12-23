@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import toast from 'react-hot-toast';
 import { Layout } from '@/components/layout/Layout';
 import Card, { CardHeader, CardBody, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -19,6 +20,9 @@ interface Offer {
   partner: {
     companyName: string;
     email: string;
+    phone?: string;
+    gstin?: string;
+    isVerified?: boolean;
   };
   quote: {
     quoteNumber: string;
@@ -63,30 +67,70 @@ export default function TraderOffers() {
     }
   };
 
-  const handleSelectOffer = async (offerId: string) => {
-    if (!confirm('Are you sure you want to select this offer? This action cannot be undone.')) {
-      return;
-    }
+  const handleSelectOffer = (offerId: string) => {
+    toast.custom((t) => (
+      <div
+        className={`${t.visible ? 'animate-enter' : 'animate-leave'
+          } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+      >
+        <div className="flex-1 w-0 p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0 pt-0.5">
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-medium text-gray-900">
+                Select this Offer?
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                This will accept the offer and notify the logistics partner. This action cannot be undone.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex border-l border-gray-200">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              const processingToast = toast.loading('Processing selection...');
 
-    try {
-      const response = await fetch(`/api/offers/${offerId}/select`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+              try {
+                const response = await fetch(`/api/offers/${offerId}/select`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                  },
+                });
 
-      const data = await response.json();
+                const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to select offer');
-      }
+                if (!response.ok) {
+                  throw new Error(data.error || 'Failed to select offer');
+                }
 
-      alert('Offer selected successfully! The partner will be notified.');
-      router.push(`/quotes/${quoteId}`);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to select offer');
-    }
+                toast.success('Offer selected successfully!', { id: processingToast });
+                router.push(`/quotes/${quoteId}`);
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Failed to select offer', { id: processingToast });
+              }
+            }}
+            className="w-full border border-transparent rounded-none p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 border-l border-gray-200"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    ));
   };
 
   const sortedOffers = [...offers].sort((a, b) => {
@@ -130,7 +174,7 @@ export default function TraderOffers() {
               </p>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <label className="text-sm font-medium text-gray-700">Sort by:</label>
             <select
@@ -153,11 +197,52 @@ export default function TraderOffers() {
                 </svg>
                 <span className="text-lg font-semibold text-green-700">Selected Offer</span>
               </div>
-              <p className="text-gray-600">
-                Partner: <strong>{selectedOffer.partner.companyName}</strong> | 
-                Price: <strong>₹{selectedOffer.price.toLocaleString()}</strong> | 
-                Transit: <strong>{selectedOffer.transitDays} days</strong>
-              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <p className="font-semibold text-gray-900">{selectedOffer.partner.companyName}</p>
+                    {selectedOffer.partner.isVerified && (
+                      <Badge variant="success" className="text-xs py-0 px-1">Verified</Badge>
+                    )}
+                  </div>
+                  {selectedOffer.partner.gstin && (
+                    <p className="text-xs text-gray-500 mt-1">GSTIN: {selectedOffer.partner.gstin}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Contact Details</p>
+                  {selectedOffer.partner.email && (
+                    <div className="flex items-center text-sm text-gray-900 mb-1">
+                      <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      {selectedOffer.partner.email}
+                    </div>
+                  )}
+                  {selectedOffer.partner.phone && (
+                    <div className="flex items-center text-sm text-gray-900">
+                      <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <span>{selectedOffer.partner.phone}</span>
+                      <a
+                        href={`tel:${selectedOffer.partner.phone}`}
+                        className="ml-2 text-blue-600 hover:text-blue-800 text-xs font-semibold border border-blue-600 rounded px-2 py-0.5 hover:bg-blue-50 transition-colors"
+                      >
+                        Call
+                      </a>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Price</p>
+                  <p className="font-semibold text-gray-900">₹{selectedOffer.price.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Transit Time</p>
+                  <p className="font-semibold text-gray-900">{selectedOffer.transitDays} days</p>
+                </div>
+              </div>
             </CardBody>
           </Card>
         )}
