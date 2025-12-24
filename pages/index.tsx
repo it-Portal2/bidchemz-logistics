@@ -43,14 +43,14 @@ export default function Home() {
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
             }}></div>
           </div>
-          
+
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
             <div className="text-center">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 bg-opacity-80 border border-blue-400 mb-6">
                 <span className="text-sm font-semibold text-white">Powered by BidChemz Chemical Marketplace</span>
               </div>
               <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-6 leading-tight tracking-tight">
-                India's First<br />
+                India&apos;s First<br />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-cyan-200">
                   Chemical Logistics Exchange
                 </span>
@@ -59,10 +59,10 @@ export default function Home() {
                 Connecting chemical traders with verified logistics partners through reverse bidding. Get competitive quotes for your hazardous and non-hazardous freight in minutes.
               </p>
               <p className="text-lg text-blue-200 mb-10 max-w-3xl mx-auto">
-                Built by BidChemz, India's leading chemical marketplace, to solve the logistics challenge for our buyers and sellers
+                Built by BidChemz, India&apos;s leading chemical marketplace, to solve the logistics challenge for our buyers and sellers
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-                <button 
+                <button
                   onClick={() => router.push('/signup')}
                   className="group inline-flex items-center justify-center bg-white text-blue-700 hover:bg-blue-50 px-10 py-5 text-lg font-bold shadow-2xl rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 cursor-pointer"
                 >
@@ -71,7 +71,7 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </button>
-                <button 
+                <button
                   onClick={() => router.push('/login')}
                   className="inline-flex items-center justify-center bg-transparent text-white hover:bg-white hover:bg-opacity-10 px-10 py-5 text-lg font-semibold border-2 border-white rounded-lg transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 cursor-pointer"
                 >
@@ -137,19 +137,19 @@ export default function Home() {
                   About BidChemz Logistics
                 </div>
                 <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">
-                  Born from India's Largest Chemical Marketplace
+                  Born from India&apos;s Largest Chemical Marketplace
                 </h2>
                 <p className="text-lg text-gray-700 mb-4 leading-relaxed">
-                  BidChemz started as India's premier B2B chemical marketplace, connecting thousands of chemical buyers and sellers across the country. As we grew, we identified a critical gap: <strong>efficient, reliable logistics for chemical freight</strong>.
+                  BidChemz started as India&apos;s premier B2B chemical marketplace, connecting thousands of chemical buyers and sellers across the country. As we grew, we identified a critical gap: <strong>efficient, reliable logistics for chemical freight</strong>.
                 </p>
                 <p className="text-lg text-gray-700 mb-4 leading-relaxed">
                   Our traders were spending hours calling multiple logistics companies, negotiating prices, and worrying about compliance. We built this logistics exchange to solve that problem once and for all.
                 </p>
                 <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-                  Today, BidChemz Logistics seamlessly integrates with our chemical marketplace, giving our existing buyers and sellers instant access to India's largest network of verified chemical logistics providers.
+                  Today, BidChemz Logistics seamlessly integrates with our chemical marketplace, giving our existing buyers and sellers instant access to India&apos;s largest network of verified chemical logistics providers.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <button 
+                  <button
                     onClick={() => router.push('/signup')}
                     className="inline-flex items-center justify-center bg-blue-600 text-white hover:bg-blue-700 px-8 py-4 text-base font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 cursor-pointer"
                   >
@@ -277,10 +277,10 @@ export default function Home() {
                   Grow Your Chemical Logistics Business
                 </h2>
                 <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                  Access high-quality leads from BidChemz's 50,000+ chemical traders through our transparent subscription model
+                  Access high-quality leads from BidChemz&apos;s 50,000+ chemical traders through our transparent subscription model
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                 <div className="bg-white rounded-xl p-8 shadow-md hover:shadow-xl transition-shadow">
                   <div className="text-center">
@@ -318,7 +318,7 @@ export default function Home() {
               </div>
 
               <div className="text-center">
-                <button 
+                <button
                   onClick={() => router.push('/signup')}
                   className="inline-flex items-center justify-center bg-green-600 text-white hover:bg-green-700 px-10 py-5 text-lg font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-green-300 cursor-pointer"
                 >
@@ -431,7 +431,7 @@ export default function Home() {
               Join thousands of chemical traders and logistics partners using BidChemz to streamline their freight operations
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button 
+              <button
                 onClick={() => router.push('/signup')}
                 className="inline-flex items-center justify-center bg-white text-blue-700 hover:bg-blue-50 px-10 py-5 text-lg font-bold shadow-2xl rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 cursor-pointer"
               >

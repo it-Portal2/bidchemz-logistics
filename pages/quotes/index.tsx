@@ -72,7 +72,7 @@ export default function QuotesList() {
         {quotes.length === 0 ? (
           <Card>
             <div className="text-center py-12">
-              <p className="text-gray-600 mb-4">You haven't created any freight requests yet</p>
+              <p className="text-gray-600 mb-4">You haven&apos;t created any freight requests yet</p>
               <Link href="/quotes/new">
                 <Button variant="primary">Create Your First Request</Button>
               </Link>

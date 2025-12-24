@@ -31,7 +31,8 @@ export default async function handler(
       where.status = status;
     }
 
-    const cacheKeyStr = cacheKey('quotes', user.userId, page, limit, sortBy, sortOrder, status || 'all');
+    const statusStr = Array.isArray(status) ? status.join(',') : status || 'all';
+    const cacheKeyStr = cacheKey('quotes', user.userId, page, limit, sortBy, sortOrder, statusStr);
 
     const result = await getOrSetCache(
       cacheKeyStr,

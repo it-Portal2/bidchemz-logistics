@@ -333,7 +333,7 @@ export default function PartnerDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Partner Dashboard</h1>
-            <p className="text-gray-600 mt-1">Welcome back! Here's your performance overview</p>
+            <p className="text-gray-600 mt-1">Welcome back! Here&apos;s your performance overview</p>
           </div>
           <div className="flex gap-3">
             <Link href="/partner/leads">

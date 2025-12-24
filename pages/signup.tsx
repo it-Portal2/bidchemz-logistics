@@ -181,10 +181,10 @@ export default function Signup() {
                 <div className="flex flex-col items-center">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${s === step
-                        ? 'bg-blue-600 text-white shadow-lg scale-110'
-                        : s < step
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-200 text-gray-500'
+                      ? 'bg-blue-600 text-white shadow-lg scale-110'
+                      : s < step
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-500'
                       }`}
                   >
                     {s < step ? (
@@ -337,7 +337,7 @@ export default function Signup() {
                     </svg>
                     <div className="text-sm text-green-800">
                       <p className="font-semibold mb-1">Security Tip</p>
-                      <p>Use a unique password that you don't use for other accounts. Consider using a password manager.</p>
+                      <p>Use a unique password that you don&apos;t use for other accounts. Consider using a password manager.</p>
                     </div>
                   </div>
                 </div>
