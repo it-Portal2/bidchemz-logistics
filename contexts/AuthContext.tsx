@@ -5,7 +5,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { UserRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 
 interface User {
   id: string;
