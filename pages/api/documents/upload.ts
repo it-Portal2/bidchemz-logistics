@@ -31,8 +31,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     const file = Array.isArray(files.file) ? files.file[0] : files.file;
     const quoteId = Array.isArray(fields.quoteId) ? fields.quoteId[0] : fields.quoteId;
-    const documentType = Array.isArray(fields.documentType) 
-      ? fields.documentType[0] 
+    const documentType = Array.isArray(fields.documentType)
+      ? fields.documentType[0]
       : fields.documentType || 'MSDS';
 
     if (!file) {
@@ -60,14 +60,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     const encryptionKey = generateEncryptionKey();
     const { encrypted } = await encryptBuffer(fileBuffer, encryptionKey);
 
-    const uploadsDir = path.join(process.cwd(), 'uploads', 'encrypted');
-    await fs.promises.mkdir(uploadsDir, { recursive: true });
+    // Skip local file writing for deployment compatibility
+    // Instead, store in DB directly as fallback if S3 is not configured
 
-    const encryptedFileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.enc`;
-    const encryptedFilePath = path.join(uploadsDir, encryptedFileName);
-
-    await fs.promises.writeFile(encryptedFilePath, encrypted);
-
+    // Clean up temp file
     await fs.promises.unlink(file.filepath);
 
     const document = await prisma.document.create({
@@ -76,7 +72,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         fileName: file.originalFilename || 'unknown',
         fileType: file.mimetype || 'application/octet-stream',
         fileSize: file.size,
-        fileUrl: `/uploads/encrypted/${encryptedFileName}`,
+        fileUrl: `db://${Date.now()}`, // Placeholder, content is in fileData
+        fileData: encrypted as any,
+        isStoredInDB: true,
         encryptionKey,
         documentType,
         uploadedBy: req.user!.userId,

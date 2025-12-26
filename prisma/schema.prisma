@@ -209,6 +209,8 @@ model Document {
   encryptionKey String?
   documentType  String
   uploadedBy    String
+  fileData      Bytes?    // Fallback for DB storage
+  isStoredInDB  Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   quote         Quote?    @relation(fields: [quoteId], references: [id])

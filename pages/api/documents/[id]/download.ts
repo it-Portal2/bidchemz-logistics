@@ -53,16 +53,25 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       return res.status(500).json({ error: 'Document encryption key not found' });
     }
 
-    const fileUrl = document.fileUrl.startsWith('/') 
-      ? document.fileUrl.substring(1) 
-      : document.fileUrl;
-    const encryptedFilePath = path.join(process.cwd(), fileUrl);
+    let encryptedBuffer: Buffer;
 
-    if (!fs.existsSync(encryptedFilePath)) {
-      return res.status(404).json({ error: 'File not found on server' });
+    // Type casting to access new fields until full type regeneration
+    const doc = document as any;
+
+    if (doc.isStoredInDB && doc.fileData) {
+      encryptedBuffer = doc.fileData;
+    } else {
+      const fileUrl = document.fileUrl.startsWith('/')
+        ? document.fileUrl.substring(1)
+        : document.fileUrl;
+      const encryptedFilePath = path.join(process.cwd(), fileUrl);
+
+      if (!fs.existsSync(encryptedFilePath)) {
+        return res.status(404).json({ error: 'File not found on server' });
+      }
+
+      encryptedBuffer = await fs.promises.readFile(encryptedFilePath);
     }
-
-    const encryptedBuffer = await fs.promises.readFile(encryptedFilePath);
 
     const decryptedBuffer = await decryptBuffer(
       encryptedBuffer,

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { notify } from '@/utils/toast';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/router';
 
@@ -50,7 +51,7 @@ export default function AdminShipments() {
     try {
       const response = await fetch(`/api/shipments/${id}`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
@@ -60,17 +61,17 @@ export default function AdminShipments() {
       if (response.ok) {
         fetchShipments();
         setEditingId(null);
-        alert('Shipment updated successfully');
+        notify.success('Shipment updated successfully');
       }
     } catch (error) {
       console.error('Error updating shipment:', error);
-      alert('Failed to update shipment');
+      notify.error('Failed to update shipment');
     }
   };
 
   const deleteShipment = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this shipment?')) return;
-    
+
     try {
       const response = await fetch(`/api/shipments/${id}`, {
         method: 'DELETE',
@@ -79,11 +80,11 @@ export default function AdminShipments() {
 
       if (response.ok) {
         setShipments(shipments.filter(s => s.id !== id));
-        alert('Shipment deleted successfully');
+        notify.success('Shipment deleted successfully');
       }
     } catch (error) {
       console.error('Error deleting shipment:', error);
-      alert('Failed to delete shipment');
+      notify.error('Failed to delete shipment');
     }
   };
 
@@ -138,12 +139,11 @@ export default function AdminShipments() {
                             <option>DELIVERED</option>
                           </select>
                         ) : (
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            shipment.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
-                            shipment.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
-                            shipment.status === 'BOOKED' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${shipment.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
+                              shipment.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
+                                shipment.status === 'BOOKED' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                            }`}>
                             {shipment.status}
                           </span>
                         )}

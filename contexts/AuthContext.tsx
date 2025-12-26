@@ -6,6 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import type { UserRole } from "@prisma/client";
+import { notify } from "@/utils/toast";
 
 interface User {
   id: string;
@@ -110,10 +111,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token);
       if (typeof window !== "undefined") {
         localStorage.setItem("token", data.token);
+        notify.success("Logged in successfully");
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";
       setError(errorMessage);
+      notify.error(errorMessage);
       throw err;
     }
   };
@@ -149,10 +152,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token);
       if (typeof window !== "undefined") {
         localStorage.setItem("token", data.token);
+        notify.success("Account created successfully");
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Signup failed";
       setError(errorMessage);
+      notify.error(errorMessage);
       throw err;
     }
   };
@@ -162,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     if (typeof window !== "undefined") {
       localStorage.removeItem("token");
+      notify.success("Logged out successfully");
     }
   };
 

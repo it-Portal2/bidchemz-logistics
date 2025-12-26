@@ -113,27 +113,19 @@ export default function Signup() {
 
     try {
       const { confirmPassword, ...signupData } = formData;
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...signupData,
-          consents: {
-            termsOfService: consents.termsOfService,
-            privacyPolicy: consents.privacyPolicy,
-            partnerPolicy: formData.role === UserRole.LOGISTICS_PARTNER ? consents.partnerPolicy : undefined,
-          },
-        }),
+
+      await signup({
+        ...signupData,
+        role: signupData.role as UserRole,
+        consents: {
+          termsOfService: consents.termsOfService,
+          privacyPolicy: consents.privacyPolicy,
+          partnerPolicy: formData.role === UserRole.LOGISTICS_PARTNER ? consents.partnerPolicy : undefined,
+        },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Signup failed');
-      }
-
+      // User is now logged in via context
       router.push('/verify-pending');
-
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed');

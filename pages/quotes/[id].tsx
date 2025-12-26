@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import toast from 'react-hot-toast';
-import { playNotificationSound } from "@/utils/sound";
+import { notify } from "@/utils/toast";
 import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import Card, { CardHeader, CardBody, CardTitle } from "@/components/ui/Card";
@@ -249,8 +248,7 @@ export default function QuoteDetails() {
                 token={token!}
                 onUploadComplete={() => {
                   fetchQuote();
-                  playNotificationSound();
-                  toast.success("Document list refreshed");
+                  notify.success("Document list refreshed");
                 }}
               />
             )}
@@ -288,7 +286,7 @@ export default function QuoteDetails() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={async () => {
-                              const toastId = toast.loading("Downloading...");
+                              const toastId = notify.loading("Downloading...");
                               try {
                                 const res = await fetch(`/api/documents/${d.id}/download`, {
                                   headers: { Authorization: `Bearer ${token}` },
@@ -303,11 +301,11 @@ export default function QuoteDetails() {
                                 a.click();
                                 window.URL.revokeObjectURL(url);
                                 document.body.removeChild(a);
-                                toast.dismiss(toastId);
-                                toast.success("Download started");
+                                notify.dismiss(toastId);
+                                notify.success("Download started");
                               } catch (err) {
                                 console.error(err);
-                                toast.error('Failed to download document', { id: toastId });
+                                notify.error('Failed to download document', { id: toastId });
                               }
                             }}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -321,7 +319,7 @@ export default function QuoteDetails() {
                           {isTrader && (
                             <button
                               onClick={() => {
-                                toast.custom((t) => (
+                                notify.custom((t) => (
                                   <div
                                     className={`${t.visible ? 'animate-enter' : 'animate-leave'
                                       } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
@@ -347,15 +345,15 @@ export default function QuoteDetails() {
                                     </div>
                                     <div className="flex border-l border-gray-200">
                                       <button
-                                        onClick={() => toast.dismiss(t.id)}
+                                        onClick={() => notify.dismiss(t.id)}
                                         className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                       >
                                         Cancel
                                       </button>
                                       <button
                                         onClick={async () => {
-                                          toast.dismiss(t.id);
-                                          const deleteToastId = toast.loading("Deleting...");
+                                          notify.dismiss(t.id);
+                                          const deleteToastId = notify.loading("Deleting...");
                                           try {
                                             const res = await fetch(`/api/documents/${d.id}`, {
                                               method: 'DELETE',
@@ -367,12 +365,11 @@ export default function QuoteDetails() {
                                               throw new Error(data.error || 'Delete failed');
                                             }
 
-                                            playNotificationSound();
-                                            toast.success("Document deleted", { id: deleteToastId });
+                                            notify.success("Document deleted", { id: deleteToastId });
                                             fetchQuote();
                                           } catch (err) {
                                             console.error(err);
-                                            toast.error(err instanceof Error ? err.message : 'Failed to delete document', { id: deleteToastId });
+                                            notify.error(err instanceof Error ? err.message : 'Failed to delete document', { id: deleteToastId });
                                           }
                                         }}
                                         className="w-full border border-transparent rounded-none p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 border-l border-gray-200"

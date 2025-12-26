@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, Badge, Button, Table, Modal, Alert } from '@/components/ui';
+import { Card, Badge, Button, Table, Modal } from '@/components/ui';
+import { notify } from '@/utils/toast';
 import { useRouter } from 'next/router';
 
 export default function AdminPayments() {
@@ -16,7 +17,7 @@ export default function AdminPayments() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [actionType, setActionType] = useState<'APPROVED' | 'REJECTED'>('APPROVED');
   const [processing, setProcessing] = useState(false);
-  const [alert, setAlert] = useState<{ type: 'success' | 'danger' | 'warning' | 'info'; message: string } | null>(null);
+
 
   useEffect(() => {
     if (!user || user.role !== 'ADMIN') {
@@ -74,20 +75,17 @@ export default function AdminPayments() {
       });
 
       if (response.ok) {
-        setAlert({
-          type: 'success',
-          message: `Payment request ${actionType.toLowerCase()} successfully`,
-        });
+        notify.success(`Payment request ${actionType.toLowerCase()} successfully`);
         setShowModal(false);
         setReviewNotes('');
         setSelectedRequest(null);
         fetchPaymentRequests();
       } else {
         const data = await response.json();
-        setAlert({ type: 'danger', message: data.error || 'Failed to review request' });
+        notify.error(data.error || 'Failed to review request');
       }
     } catch (error) {
-      setAlert({ type: 'danger', message: 'An error occurred' });
+      notify.error('An error occurred');
     } finally {
       setProcessing(false);
     }
@@ -206,11 +204,7 @@ export default function AdminPayments() {
           <p className="text-gray-600">Review and approve wallet recharge requests from partners</p>
         </div>
 
-        {alert && (
-          <Alert type={alert.type} className="mb-6" onClose={() => setAlert(null)}>
-            {alert.message}
-          </Alert>
-        )}
+
 
         <Card className="mb-6">
           <div className="flex gap-4 mb-4">

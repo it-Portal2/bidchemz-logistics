@@ -13,6 +13,7 @@ function generateShortId(role: UserRole) {
   const random = Math.random().toString(36).substring(2, 8).toUpperCase();
   return role === UserRole.TRADER ? `buyer_${random}` : `partner_${random}`;
 }
+import { generateToken } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
@@ -104,8 +105,23 @@ export default async function handler(
     --------------------------------*/
     await sendVerificationEmail(user.email, token);
 
+    const authToken = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      companyName: user.companyName || undefined,
+    });
+
     return res.status(201).json({
       message: "Signup successful. Please verify your email.",
+      token: authToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        companyName: user.companyName,
+        isVerified: user.isVerified,
+      },
     });
   } catch (error) {
     console.error("Signup error:", error);

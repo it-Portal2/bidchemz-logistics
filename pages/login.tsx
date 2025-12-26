@@ -154,9 +154,6 @@ export default function Login() {
         </Card>
 
         <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500">
-            For demo purposes, use: admin@bidchemz.com / Test@123
-          </p>
         </div>
       </div>
     </div>

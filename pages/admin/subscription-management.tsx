@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import Alert from '@/components/ui/Alert';
 import Badge from '@/components/ui/Badge';
+import { notify } from '@/utils/toast';
 
 const SubscriptionTiers = ['FREE', 'STANDARD', 'PREMIUM'];
 
@@ -12,7 +12,7 @@ export default function SubscriptionManagementPage() {
   const [loading, setLoading] = useState(true);
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [newTier, setNewTier] = useState('');
-  const [alert, setAlert] = useState<{ type: 'success' | 'danger' | 'warning' | 'info'; message: string } | null>(null);
+
 
   useEffect(() => {
     fetchPartners();
@@ -26,7 +26,7 @@ export default function SubscriptionManagementPage() {
         setPartners(data.users || []);
       }
     } catch (error) {
-      setAlert({ type: 'danger', message: 'Failed to fetch partners' });
+      notify.error('Failed to fetch partners');
     } finally {
       setLoading(false);
     }
@@ -44,15 +44,15 @@ export default function SubscriptionManagementPage() {
       });
 
       if (response.ok) {
-        setAlert({ type: 'success', message: 'Subscription tier updated!' });
+        notify.success('Subscription tier updated!');
         fetchPartners();
         setSelectedPartner(null);
       } else {
         const data = await response.json();
-        setAlert({ type: 'danger', message: data.error });
+        notify.error(data.error);
       }
     } catch (error) {
-      setAlert({ type: 'danger', message: 'Failed to update tier' });
+      notify.error('Failed to update tier');
     }
   };
 
@@ -75,7 +75,7 @@ export default function SubscriptionManagementPage() {
           <p className="text-gray-600 mt-2">Manage partner subscription tiers and pricing</p>
         </div>
 
-        {alert && <Alert type={alert.type}>{alert.message}</Alert>}
+
 
         <Card>
           <div className="overflow-x-auto">

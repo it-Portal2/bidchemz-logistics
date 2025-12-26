@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
+import { notify } from '@/utils/toast';
 import { Layout } from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -64,13 +65,13 @@ export default function AdminUsersPage() {
       if (response.ok) {
         fetchUsers();
         setEditingId(null);
-        alert('User updated successfully');
+        notify.success('User updated successfully');
       } else {
-        alert('Failed to update user');
+        notify.error('Failed to update user');
       }
     } catch (error) {
       console.error('Error updating user:', error);
-      alert('Failed to update user');
+      notify.error('Failed to update user');
     }
   };
 
@@ -117,13 +118,13 @@ export default function AdminUsersPage() {
 
       if (response.ok) {
         fetchUsers();
-        alert('User deleted successfully');
+        notify.success('User deleted successfully');
       } else {
-        alert('Failed to delete user');
+        notify.error('Failed to delete user');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Failed to delete user');
+      notify.error('Failed to delete user');
     }
   };
 
@@ -279,21 +280,19 @@ export default function AdminUsersPage() {
                             </button>
                             <button
                               onClick={() => toggleUserStatus(u.id, u.isActive)}
-                              className={`px-2 py-1 text-white text-xs rounded ${
-                                u.isActive
+                              className={`px-2 py-1 text-white text-xs rounded ${u.isActive
                                   ? 'bg-red-500 hover:bg-red-600'
                                   : 'bg-green-500 hover:bg-green-600'
-                              }`}
+                                }`}
                             >
                               {u.isActive ? 'Deactivate' : 'Activate'}
                             </button>
                             <button
                               onClick={() => toggleVerification(u.id, u.isVerified)}
-                              className={`px-2 py-1 text-white text-xs rounded ${
-                                u.isVerified
+                              className={`px-2 py-1 text-white text-xs rounded ${u.isVerified
                                   ? 'bg-yellow-500 hover:bg-yellow-600'
                                   : 'bg-green-500 hover:bg-green-600'
-                              }`}
+                                }`}
                             >
                               {u.isVerified ? 'Unverify' : 'Verify'}
                             </button>

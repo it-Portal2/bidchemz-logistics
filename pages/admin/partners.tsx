@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { notify } from '@/utils/toast';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/router';
 
@@ -51,7 +52,7 @@ export default function AdminPartners() {
     try {
       const response = await fetch(`/api/admin/users/${id}`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
@@ -61,11 +62,11 @@ export default function AdminPartners() {
       if (response.ok) {
         fetchPartners();
         setEditingId(null);
-        alert('Partner updated successfully');
+        notify.success('Partner updated successfully');
       }
     } catch (error) {
       console.error('Error updating partner:', error);
-      alert('Failed to update partner');
+      notify.error('Failed to update partner');
     }
   };
 
@@ -73,7 +74,7 @@ export default function AdminPartners() {
     try {
       const response = await fetch(`/api/admin/users/${id}`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
@@ -82,11 +83,11 @@ export default function AdminPartners() {
 
       if (response.ok) {
         fetchPartners();
-        alert(currentStatus ? 'Partner deactivated' : 'Partner activated');
+        notify.success(currentStatus ? 'Partner deactivated' : 'Partner activated');
       }
     } catch (error) {
       console.error('Error updating partner:', error);
-      alert('Failed to update partner');
+      notify.error('Failed to update partner');
     }
   };
 
@@ -145,9 +146,8 @@ export default function AdminPartners() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          partner.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${partner.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
                           {partner.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -192,11 +192,10 @@ export default function AdminPartners() {
                             </button>
                             <button
                               onClick={() => toggleActive(partner.id, partner.isActive)}
-                              className={`px-3 py-1 text-white text-xs rounded ${
-                                partner.isActive 
-                                  ? 'bg-red-500 hover:bg-red-600' 
-                                  : 'bg-green-500 hover:bg-green-600'
-                              }`}
+                              className={`px-3 py-1 text-white text-xs rounded ${partner.isActive
+                                ? 'bg-red-500 hover:bg-red-600'
+                                : 'bg-green-500 hover:bg-green-600'
+                                }`}
                             >
                               {partner.isActive ? 'Deactivate' : 'Activate'}
                             </button>

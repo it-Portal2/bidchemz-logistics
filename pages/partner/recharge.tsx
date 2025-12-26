@@ -99,36 +99,48 @@ export default function PartnerRecharge() {
   ];
 
   const columns = [
-    { key: 'id', header: 'Request ID', render: (row: any) => (!row || !row.id ? 'N/A' : row.id.slice(0, 8)) },
+    {
+      key: 'id',
+      header: 'Request ID',
+      render: (val: any) => (!val ? 'N/A' : val.toString().slice(0, 8))
+    },
     {
       key: 'amount',
       header: 'Amount',
-      render: (row: any) => !row ? 'N/A' : `₹${(row.amount || 0).toLocaleString()}`,
+      render: (val: any) => !val ? 'N/A' : `₹${Number(val).toLocaleString()}`,
     },
-    { key: 'paymentMethod', header: 'Method', render: (row: any) => !row ? 'N/A' : (row.paymentMethod || 'N/A').replace(/_/g, ' ') },
-    { key: 'referenceNumber', header: 'Reference', render: (row: any) => !row ? 'N/A' : (row.referenceNumber || '-') },
+    {
+      key: 'paymentMethod',
+      header: 'Method',
+      render: (val: any) => !val ? 'N/A' : val.toString().replace(/_/g, ' ')
+    },
+    {
+      key: 'referenceNumber',
+      header: 'Reference',
+      render: (val: any) => !val ? 'N/A' : val
+    },
     {
       key: 'createdAt',
       header: 'Submitted',
-      render: (row: any) => !row ? 'N/A' : new Date(row.createdAt).toLocaleDateString(),
+      render: (val: any) => !val ? 'N/A' : new Date(val).toLocaleDateString(),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (row: any) => {
-        if (!row) return 'N/A';
+      render: (val: any) => {
+        if (!val) return 'N/A';
         const colors: any = {
           PENDING: 'yellow',
           APPROVED: 'green',
           REJECTED: 'red',
         };
-        return <Badge variant={colors[row.status] || 'gray'}>{row.status || 'UNKNOWN'}</Badge>;
+        return <Badge variant={colors[val] || 'gray'}>{val || 'UNKNOWN'}</Badge>;
       },
     },
     {
       key: 'reviewNotes',
       header: 'Admin Notes',
-      render: (row: any) => !row ? 'N/A' : (row.reviewNotes || '-'),
+      render: (val: any) => !val ? '-' : val,
     },
   ];
 

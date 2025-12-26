@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { notify } from '@/utils/toast';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/router';
 
@@ -51,7 +52,7 @@ export default function AdminQuotes() {
     try {
       const response = await fetch(`/api/quotes/${id}`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
@@ -61,19 +62,19 @@ export default function AdminQuotes() {
       if (response.ok) {
         fetchQuotes();
         setEditingId(null);
-        alert('Quote updated successfully');
+        notify.success('Quote updated successfully');
       } else {
-        alert('Failed to update quote');
+        notify.error('Failed to update quote');
       }
     } catch (error) {
       console.error('Error updating quote:', error);
-      alert('Failed to update quote');
+      notify.error('Failed to update quote');
     }
   };
 
   const deleteQuote = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this quote?')) return;
-    
+
     try {
       const response = await fetch(`/api/quotes/${id}`, {
         method: 'DELETE',
@@ -82,11 +83,11 @@ export default function AdminQuotes() {
 
       if (response.ok) {
         setQuotes(quotes.filter(q => q.id !== id));
-        alert('Quote deleted successfully');
+        notify.success('Quote deleted successfully');
       }
     } catch (error) {
       console.error('Error deleting quote:', error);
-      alert('Failed to delete quote');
+      notify.error('Failed to delete quote');
     }
   };
 
@@ -147,13 +148,12 @@ export default function AdminQuotes() {
                               <option>EXPIRED</option>
                             </select>
                           ) : (
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              quote.status === 'OFFERS_AVAILABLE' ? 'bg-green-100 text-green-800' :
-                              quote.status === 'SELECTED' ? 'bg-blue-100 text-blue-800' :
-                              quote.status === 'MATCHING' ? 'bg-yellow-100 text-yellow-800' :
-                              quote.status === 'EXPIRED' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${quote.status === 'OFFERS_AVAILABLE' ? 'bg-green-100 text-green-800' :
+                                quote.status === 'SELECTED' ? 'bg-blue-100 text-blue-800' :
+                                  quote.status === 'MATCHING' ? 'bg-yellow-100 text-yellow-800' :
+                                    quote.status === 'EXPIRED' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-800'
+                              }`}>
                               {quote.status}
                             </span>
                           )}

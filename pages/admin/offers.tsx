@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { notify } from '@/utils/toast';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/router';
 
@@ -51,7 +52,7 @@ export default function AdminOffers() {
     try {
       const response = await fetch(`/api/offers/${id}`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
@@ -61,17 +62,17 @@ export default function AdminOffers() {
       if (response.ok) {
         fetchOffers();
         setEditingId(null);
-        alert('Offer updated successfully');
+        notify.success('Offer updated successfully');
       }
     } catch (error) {
       console.error('Error updating offer:', error);
-      alert('Failed to update offer');
+      notify.error('Failed to update offer');
     }
   };
 
   const deleteOffer = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this offer?')) return;
-    
+
     try {
       const response = await fetch(`/api/offers/${id}`, {
         method: 'DELETE',
@@ -80,11 +81,11 @@ export default function AdminOffers() {
 
       if (response.ok) {
         setOffers(offers.filter(o => o.id !== id));
-        alert('Offer deleted successfully');
+        notify.success('Offer deleted successfully');
       }
     } catch (error) {
       console.error('Error deleting offer:', error);
-      alert('Failed to delete offer');
+      notify.error('Failed to delete offer');
     }
   };
 
@@ -163,12 +164,11 @@ export default function AdminOffers() {
                             <option>REJECTED</option>
                           </select>
                         ) : (
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            offer.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
-                            offer.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                            offer.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${offer.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
+                              offer.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                offer.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                            }`}>
                             {offer.status}
                           </span>
                         )}
