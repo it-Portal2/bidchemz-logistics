@@ -8,10 +8,12 @@ import Badge from "@/components/ui/Badge";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { DocumentUpload } from "@/components/DocumentUpload";
 import { useRouter } from "next/router";
+import { useConfirm } from "@/contexts/ConfirmContext";
 
 export default function QuoteDetails() {
   const { user, token } = useAuth();
   const router = useRouter();
+  const { confirm } = useConfirm();
   const quoteId = Array.isArray(router.query.id)
     ? router.query.id[0]
     : router.query.id;
@@ -318,67 +320,32 @@ export default function QuoteDetails() {
 
                           {isTrader && (
                             <button
-                              onClick={() => {
-                                notify.custom((t) => (
-                                  <div
-                                    className={`${t.visible ? 'animate-enter' : 'animate-leave'
-                                      } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
-                                  >
-                                    <div className="flex-1 w-0 p-4">
-                                      <div className="flex items-start">
-                                        <div className="flex-shrink-0 pt-0.5">
-                                          <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                                            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                            </svg>
-                                          </div>
-                                        </div>
-                                        <div className="ml-3 flex-1">
-                                          <p className="text-sm font-medium text-gray-900">
-                                            Delete Document?
-                                          </p>
-                                          <p className="mt-1 text-sm text-gray-500">
-                                            Are you sure you want to delete this document? This action cannot be undone.
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="flex border-l border-gray-200">
-                                      <button
-                                        onClick={() => notify.dismiss(t.id)}
-                                        className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                      >
-                                        Cancel
-                                      </button>
-                                      <button
-                                        onClick={async () => {
-                                          notify.dismiss(t.id);
-                                          const deleteToastId = notify.loading("Deleting...");
-                                          try {
-                                            const res = await fetch(`/api/documents/${d.id}`, {
-                                              method: 'DELETE',
-                                              headers: { Authorization: `Bearer ${token}` },
-                                            });
+                              onClick={async () => {
+                                if (!await confirm({
+                                  title: 'Delete Document',
+                                  message: 'Are you sure you want to delete this document? This action cannot be undone.',
+                                  confirmText: 'Delete',
+                                  variant: 'danger'
+                                })) return;
 
-                                            if (!res.ok) {
-                                              const data = await res.json();
-                                              throw new Error(data.error || 'Delete failed');
-                                            }
+                                const deleteToastId = notify.loading("Deleting...");
+                                try {
+                                  const res = await fetch(`/api/documents/${d.id}`, {
+                                    method: 'DELETE',
+                                    headers: { Authorization: `Bearer ${token}` },
+                                  });
 
-                                            notify.success("Document deleted", { id: deleteToastId });
-                                            fetchQuote();
-                                          } catch (err) {
-                                            console.error(err);
-                                            notify.error(err instanceof Error ? err.message : 'Failed to delete document', { id: deleteToastId });
-                                          }
-                                        }}
-                                        className="w-full border border-transparent rounded-none p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 border-l border-gray-200"
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </div>
-                                ));
+                                  if (!res.ok) {
+                                    const data = await res.json();
+                                    throw new Error(data.error || 'Delete failed');
+                                  }
+
+                                  notify.success("Document deleted", { id: deleteToastId });
+                                  fetchQuote();
+                                } catch (err) {
+                                  console.error(err);
+                                  notify.error(err instanceof Error ? err.message : 'Failed to delete document', { id: deleteToastId });
+                                }
                               }}
                               className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Delete"

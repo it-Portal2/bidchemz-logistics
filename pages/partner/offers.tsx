@@ -5,6 +5,8 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { MotionContainer, MotionItem } from '@/components/ui/Motion';
 import Link from "next/link";
 import { useRouter } from "next/router";
 
@@ -45,7 +47,7 @@ interface Offer {
 }
 
 export default function PartnerOffers() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,12 +73,13 @@ export default function PartnerOffers() {
   }, [token]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user || user.role !== "LOGISTICS_PARTNER") {
       router.push("/");
       return;
     }
     fetchOffers();
-  }, [user, token, fetchOffers, router]);
+  }, [user, token, fetchOffers, router, authLoading]);
 
   const getStatusBadge = (status: OfferStatus, isSelected: boolean) => {
     if (isSelected || status === "SELECTED") {
@@ -120,13 +123,21 @@ export default function PartnerOffers() {
     ["REJECTED", "WITHDRAWN", "EXPIRED"].includes(o.status)
   ).length;
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 text-lg">Loading your offers...</p>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="h-10 w-48 bg-gray-200 rounded animate-pulse" />
+            <div className="h-10 w-40 bg-gray-200 rounded animate-pulse" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         </div>
       </Layout>
@@ -215,11 +226,10 @@ export default function PartnerOffers() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as TabType)}
-              className={`pb-3 border-b-2 px-1 font-medium text-sm ${
-                activeTab === tab.key
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`pb-3 border-b-2 px-1 font-medium text-sm ${activeTab === tab.key
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               {tab.label} ({tab.count})
             </button>
@@ -227,7 +237,7 @@ export default function PartnerOffers() {
         </div>
 
         {/* Offer List */}
-        <div className="space-y-4">
+        <MotionContainer className="space-y-4">
           {filteredOffers.length === 0 ? (
             <EmptyState
               icon="📦"
@@ -236,170 +246,170 @@ export default function PartnerOffers() {
                 activeTab === "pending"
                   ? "You don't have any pending offers. Browse leads to submit new offers."
                   : activeTab === "accepted"
-                  ? "No accepted offers yet. Keep submitting competitive offers!"
-                  : "No offers in this category."
+                    ? "No accepted offers yet. Keep submitting competitive offers!"
+                    : "No offers in this category."
               }
               actionLabel="Browse Leads"
               actionHref="/partner/leads"
             />
           ) : (
             filteredOffers.map((offer) => (
-              <Card
-                key={offer.id}
-                className="hover:shadow-lg transition-shadow"
-              >
-                <div className="p-5">
-                  <div className="flex justify-between items-start">
-                    {/* Left - Offer Details */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {offer.quote.cargoName}
-                        </h3>
-                        {getStatusBadge(offer.status, offer.isSelected)}
+              <MotionItem key={offer.id}>
+                <Card
+                  className="hover:shadow-lg transition-shadow"
+                >
+                  <div className="p-5">
+                    <div className="flex justify-between items-start">
+                      {/* Left - Offer Details */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {offer.quote.cargoName}
+                          </h3>
+                          {getStatusBadge(offer.status, offer.isSelected)}
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          <div className="flex items-center text-gray-600">
+                            <svg
+                              className="w-4 h-4 mr-2 text-blue-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                            </svg>
+                            <span>
+                              {offer.quote.pickupCity} →{" "}
+                              {offer.quote.deliveryCity}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <svg
+                              className="w-4 h-4 mr-2 text-purple-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                              />
+                            </svg>
+                            <span>
+                              {offer.quote.quantity} {offer.quote.quantityUnit}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-green-600 font-semibold">
+                            <svg
+                              className="w-4 h-4 mr-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            <span>₹{offer.price.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <svg
+                              className="w-4 h-4 mr-2 text-orange-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            <span>{offer.transitDays} days transit</span>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 text-xs text-gray-500">
+                          Quote #{offer.quote.quoteNumber} • Submitted{" "}
+                          {new Date(offer.submittedAt).toLocaleDateString()}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        <div className="flex items-center text-gray-600">
-                          <svg
-                            className="w-4 h-4 mr-2 text-blue-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                            />
-                          </svg>
-                          <span>
-                            {offer.quote.pickupCity} →{" "}
-                            {offer.quote.deliveryCity}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <svg
-                            className="w-4 h-4 mr-2 text-purple-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                            />
-                          </svg>
-                          <span>
-                            {offer.quote.quantity} {offer.quote.quantityUnit}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-green-600 font-semibold">
-                          <svg
-                            className="w-4 h-4 mr-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          <span>₹{offer.price.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <svg
-                            className="w-4 h-4 mr-2 text-orange-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          <span>{offer.transitDays} days transit</span>
-                        </div>
-                      </div>
+                      {/* Right - Actions */}
+                      <div className="flex flex-col gap-2 ml-4">
+                        {offer.status === "PENDING" && (
+                          <Link href={`/partner/edit-offer?offerId=${offer.id}`}>
+                            <Button variant="outline" size="sm">
+                              Edit Offer
+                            </Button>
+                          </Link>
+                        )}
 
-                      <div className="mt-3 text-xs text-gray-500">
-                        Quote #{offer.quote.quoteNumber} • Submitted{" "}
-                        {new Date(offer.submittedAt).toLocaleDateString()}
-                      </div>
-                    </div>
-
-                    {/* Right - Actions */}
-                    <div className="flex flex-col gap-2 ml-4">
-                      {offer.status === "PENDING" && (
-                        <Link href={`/partner/edit-offer?offerId=${offer.id}`}>
-                          <Button variant="outline" size="sm">
-                            Edit Offer
-                          </Button>
-                        </Link>
-                      )}
-
-                      {(offer.isSelected || offer.status === "SELECTED") && (
-                        <Link
-                          href={`/partner/shipments/${
-                            offer.shipment?.id || offer.id
-                          }`}
-                        >
-                          <Button variant="primary" size="sm">
-                            📦 Manage Shipment
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Accepted Offer - Shipment Section */}
-                  {(offer.isSelected || offer.status === "SELECTED") && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">🚚</span>
-                          <span className="font-medium text-gray-900">
-                            Shipment Status
-                          </span>
-                          {offer.shipment ? (
-                            <Badge variant="primary">
-                              {offer.shipment.status.replace("_", " ")}
-                            </Badge>
-                          ) : (
-                            <Badge variant="warning">
-                              Awaiting Shipment Creation
-                            </Badge>
-                          )}
-                        </div>
-                        {offer.shipment && (
-                          <span className="text-sm text-gray-500">
-                            #{offer.shipment.shipmentNumber}
-                          </span>
+                        {(offer.isSelected || offer.status === "SELECTED") && (
+                          <Link
+                            href={`/partner/shipments/${offer.shipment?.id || offer.id
+                              }`}
+                          >
+                            <Button variant="primary" size="sm">
+                              📦 Manage Shipment
+                            </Button>
+                          </Link>
                         )}
                       </div>
-
-                      {!offer.shipment && (
-                        <p className="mt-2 text-sm text-gray-600">
-                          Shipment will be created once the trader confirms the
-                          booking.
-                        </p>
-                      )}
                     </div>
-                  )}
-                </div>
-              </Card>
+
+                    {/* Accepted Offer - Shipment Section */}
+                    {(offer.isSelected || offer.status === "SELECTED") && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🚚</span>
+                            <span className="font-medium text-gray-900">
+                              Shipment Status
+                            </span>
+                            {offer.shipment ? (
+                              <Badge variant="primary">
+                                {offer.shipment.status.replace("_", " ")}
+                              </Badge>
+                            ) : (
+                              <Badge variant="warning">
+                                Awaiting Shipment Creation
+                              </Badge>
+                            )}
+                          </div>
+                          {offer.shipment && (
+                            <span className="text-sm text-gray-500">
+                              #{offer.shipment.shipmentNumber}
+                            </span>
+                          )}
+                        </div>
+
+                        {!offer.shipment && (
+                          <p className="mt-2 text-sm text-gray-600">
+                            Shipment will be created once the trader confirms the
+                            booking.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </MotionItem>
             ))
           )}
-        </div>
+        </MotionContainer>
       </div>
     </Layout>
   );

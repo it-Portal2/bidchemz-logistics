@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { SkeletonTable } from '@/components/ui/Skeleton';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { notify } from '@/utils/toast';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/router';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 export default function AdminShipments() {
   const { user, token } = useAuth();
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [shipments, setShipments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,7 +73,12 @@ export default function AdminShipments() {
   };
 
   const deleteShipment = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this shipment?')) return;
+    if (!await confirm({
+      title: 'Delete Shipment',
+      message: 'Are you sure you want to delete this shipment?',
+      confirmText: 'Delete',
+      variant: 'danger'
+    })) return;
 
     try {
       const response = await fetch(`/api/shipments/${id}`, {
@@ -88,7 +96,20 @@ export default function AdminShipments() {
     }
   };
 
-  if (loading) return <Layout><div className="text-center py-12">Loading shipments...</div></Layout>;
+  if (loading) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="mb-6 h-10 w-48 bg-gray-200 rounded animate-pulse" />
+          <Card>
+            <div className="p-4">
+              <SkeletonTable rows={8} cols={6} />
+            </div>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -140,9 +161,9 @@ export default function AdminShipments() {
                           </select>
                         ) : (
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${shipment.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
-                              shipment.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
-                                shipment.status === 'BOOKED' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
+                            shipment.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
+                              shipment.status === 'BOOKED' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
                             }`}>
                             {shipment.status}
                           </span>

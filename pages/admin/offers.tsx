@@ -4,10 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { notify } from '@/utils/toast';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/router';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 export default function AdminOffers() {
   const { user, token } = useAuth();
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [offers, setOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -71,7 +73,12 @@ export default function AdminOffers() {
   };
 
   const deleteOffer = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this offer?')) return;
+    if (!await confirm({
+      title: 'Delete Offer',
+      message: 'Are you sure you want to delete this offer? This action cannot be undone.',
+      confirmText: 'Delete',
+      variant: 'danger'
+    })) return;
 
     try {
       const response = await fetch(`/api/offers/${id}`, {
@@ -165,9 +172,9 @@ export default function AdminOffers() {
                           </select>
                         ) : (
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${offer.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
-                              offer.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                                offer.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
+                            offer.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                              offer.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
                             }`}>
                             {offer.status}
                           </span>

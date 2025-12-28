@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { SkeletonTable } from '@/components/ui/Skeleton';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { notify } from '@/utils/toast';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/router';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 export default function AdminQuotes() {
   const { user, token } = useAuth();
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [quotes, setQuotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -73,7 +76,12 @@ export default function AdminQuotes() {
   };
 
   const deleteQuote = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this quote?')) return;
+    if (!await confirm({
+      title: 'Delete Quote',
+      message: 'Are you sure you want to delete this quote? This action cannot be undone.',
+      confirmText: 'Delete',
+      variant: 'danger'
+    })) return;
 
     try {
       const response = await fetch(`/api/quotes/${id}`, {
@@ -91,7 +99,20 @@ export default function AdminQuotes() {
     }
   };
 
-  if (loading) return <Layout><div className="text-center py-12">Loading quotes...</div></Layout>;
+  if (loading) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="mb-6 h-10 w-48 bg-gray-200 rounded animate-pulse" />
+          <Card>
+            <div className="p-4">
+              <SkeletonTable rows={8} cols={6} />
+            </div>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -149,10 +170,10 @@ export default function AdminQuotes() {
                             </select>
                           ) : (
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${quote.status === 'OFFERS_AVAILABLE' ? 'bg-green-100 text-green-800' :
-                                quote.status === 'SELECTED' ? 'bg-blue-100 text-blue-800' :
-                                  quote.status === 'MATCHING' ? 'bg-yellow-100 text-yellow-800' :
-                                    quote.status === 'EXPIRED' ? 'bg-red-100 text-red-800' :
-                                      'bg-gray-100 text-gray-800'
+                              quote.status === 'SELECTED' ? 'bg-blue-100 text-blue-800' :
+                                quote.status === 'MATCHING' ? 'bg-yellow-100 text-yellow-800' :
+                                  quote.status === 'EXPIRED' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
                               }`}>
                               {quote.status}
                             </span>

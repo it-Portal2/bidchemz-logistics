@@ -23,6 +23,7 @@
     "bcryptjs": "^3.0.3",
     "chart.js": "^4.5.1",
     "formidable": "^3.5.4",
+    "framer-motion": "^12.23.26",
     "jsonwebtoken": "^9.0.2",
     "next": "^15.2.3",
     "nodemailer": "^7.0.11",

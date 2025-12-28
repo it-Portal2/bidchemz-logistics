@@ -2,10 +2,6 @@ import { NextApiResponse } from "next";
 import prisma from "@/lib/prisma";
 import { withAuth, AuthenticatedRequest } from "@/lib/middleware";
 import { QuoteStatus, UserRole } from "@prisma/client";
-import {
-  findMatchingPartners,
-  notifyMatchedPartners,
-} from "@/lib/matching-engine";
 
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   if (req.method === "GET") {
@@ -64,6 +60,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     }
   } else if (req.method === "POST") {
     try {
+      // Dynamic import to prevent top-level module loading errors
+      const {
+        findMatchingPartners,
+        notifyMatchedPartners,
+      } = await import("@/lib/matching-engine");
+
       if (req.user!.role !== UserRole.TRADER) {
         return res.status(403).json({
           error: "Only traders can create freight requests",

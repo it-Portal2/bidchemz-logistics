@@ -13,7 +13,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const inputId = providedId || generatedId;
     const errorId = `${inputId}-error`;
     const hintId = `${inputId}-hint`;
-    
+
     return (
       <div className="w-full">
         {label && (
@@ -36,11 +36,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className={`
               w-full px-4 py-2 border rounded-md transition-all duration-200
               ${icon ? 'pl-10' : ''}
-              ${error 
-                ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-500' 
+              ${error
+                ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-500'
                 : 'border-secondary-300 focus:border-primary-500 focus:ring-primary-500'
               }
-              focus:outline-none focus:ring-2 focus:ring-offset-0
+              focus:outline-none focus:ring-2 focus:ring-offset-2
               disabled:bg-secondary-50 disabled:cursor-not-allowed
               ${className}
             `}

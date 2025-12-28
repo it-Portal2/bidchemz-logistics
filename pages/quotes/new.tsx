@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { notify } from "@/utils/toast";
 import { Layout } from "@/components/layout/Layout";
 import { FormSection } from "@/components/forms/FormSection";
 import { FormField } from "@/components/forms/FormField";
@@ -170,13 +171,21 @@ export default function NewQuote() {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      const firstErrorKey = Object.keys(formErrors)[0];
+      const element = document.getElementById(firstErrorKey);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.focus();
+      }
+      notify.error("Please fill in all required fields");
       return;
     }
 
@@ -204,7 +213,15 @@ export default function NewQuote() {
         }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON Value:", text);
+        throw new Error("Server returned non-JSON response. Check console for details.");
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to create quote");
@@ -218,7 +235,7 @@ export default function NewQuote() {
       router.push(`/quotes/${data.quote.id}`);
     } catch (error) {
       console.error("Error creating quote:", error);
-      alert(error instanceof Error ? error.message : "Failed to create quote");
+      notify.error(error instanceof Error ? error.message : "Failed to create quote");
     } finally {
       setIsSubmitting(false);
     }

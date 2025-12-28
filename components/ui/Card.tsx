@@ -31,12 +31,12 @@ const Card: React.FC<CardProps> = ({
     lg: 'p-8',
   };
 
-  const hoverStyles = hoverable 
-    ? 'transition-shadow duration-200 hover:shadow-card-hover cursor-pointer' 
+  const hoverStyles = hoverable
+    ? 'transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer'
     : '';
 
   return (
-    <div className={`bg-white rounded-lg border border-secondary-200 shadow-card ${hoverStyles} ${className}`}>
+    <div className={`bg-white rounded-lg border border-secondary-200 shadow-card h-full ${hoverStyles} ${className}`}>
       {(title || subtitle || headerAction) && (
         <div className={`border-b border-secondary-200 ${paddingStyles[padding]}`}>
           <div className="flex items-start justify-between">

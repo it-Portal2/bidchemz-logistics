@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SkeletonTable } from '@/components/ui/Skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { notify } from '@/utils/toast';
@@ -6,10 +7,12 @@ import { Layout } from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 export default function AdminUsersPage() {
   const { user, token } = useAuth();
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -108,7 +111,12 @@ export default function AdminUsersPage() {
   };
 
   const deleteUser = async (userId: string) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    if (!await confirm({
+      title: 'Delete User',
+      message: 'Are you sure you want to delete this user? This action cannot be undone.',
+      confirmText: 'Delete',
+      variant: 'danger'
+    })) return;
 
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
@@ -155,8 +163,8 @@ export default function AdminUsersPage() {
 
         <Card>
           {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="p-4">
+              <SkeletonTable rows={5} cols={6} />
             </div>
           ) : users.length === 0 ? (
             <div className="text-center py-12">
@@ -281,8 +289,8 @@ export default function AdminUsersPage() {
                             <button
                               onClick={() => toggleUserStatus(u.id, u.isActive)}
                               className={`px-2 py-1 text-white text-xs rounded ${u.isActive
-                                  ? 'bg-red-500 hover:bg-red-600'
-                                  : 'bg-green-500 hover:bg-green-600'
+                                ? 'bg-red-500 hover:bg-red-600'
+                                : 'bg-green-500 hover:bg-green-600'
                                 }`}
                             >
                               {u.isActive ? 'Deactivate' : 'Activate'}
@@ -290,8 +298,8 @@ export default function AdminUsersPage() {
                             <button
                               onClick={() => toggleVerification(u.id, u.isVerified)}
                               className={`px-2 py-1 text-white text-xs rounded ${u.isVerified
-                                  ? 'bg-yellow-500 hover:bg-yellow-600'
-                                  : 'bg-green-500 hover:bg-green-600'
+                                ? 'bg-yellow-500 hover:bg-yellow-600'
+                                : 'bg-green-500 hover:bg-green-600'
                                 }`}
                             >
                               {u.isVerified ? 'Unverify' : 'Verify'}

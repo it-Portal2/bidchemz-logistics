@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { ConfirmProvider } from '@/contexts/ConfirmContext'
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -11,8 +12,10 @@ function MyApp({ Component, pageProps }: AppProps) {
         <meta name="viewport" content="width=1200, viewport-fit=cover" />
       </Head>
       <AuthProvider>
-        <Toaster position="top-right" />
-        <Component {...pageProps} />
+        <ConfirmProvider>
+          <Toaster position="top-center" />
+          <Component {...pageProps} />
+        </ConfirmProvider>
       </AuthProvider>
     </>
   )

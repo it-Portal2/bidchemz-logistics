@@ -6,11 +6,13 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Alert from '@/components/ui/Alert';
 import { useAuth } from '@/contexts/AuthContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 export default function EditOfferPage() {
   const router = useRouter();
   const { offerId } = router.query;
   const { token } = useAuth();
+  const { confirm } = useConfirm();
   const [offer, setOffer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -77,7 +79,7 @@ export default function EditOfferPage() {
   };
 
   const handleWithdraw = async () => {
-    if (confirm('Are you sure you want to withdraw this offer?')) {
+    if (await confirm('Are you sure you want to withdraw this offer?')) {
       try {
         const response = await fetch(`/api/offers/${offerId}`, {
           method: 'DELETE',

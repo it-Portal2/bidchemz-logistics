@@ -5,6 +5,8 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { MotionContainer, MotionItem } from '@/components/ui/Motion';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
@@ -36,7 +38,7 @@ ChartJS.register(
 );
 
 export default function PartnerDashboard() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState({
     activeOffers: 0,
@@ -59,13 +61,15 @@ export default function PartnerDashboard() {
   const [showTimeFilter, setShowTimeFilter] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!user || user.role !== 'LOGISTICS_PARTNER') {
       router.push('/');
       return;
     }
 
     fetchDashboardData();
-  }, [user, token]);
+  }, [user, token, authLoading]);
 
   const fetchDashboardData = async () => {
     try {
@@ -314,13 +318,25 @@ export default function PartnerDashboard() {
     },
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 text-lg">Loading your dashboard...</p>
+        <div className="space-y-6">
+          <div className="flex justify-between">
+            <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
+            <div className="h-10 w-48 bg-gray-200 rounded animate-pulse" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[...Array(2)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         </div>
       </Layout>
@@ -355,41 +371,79 @@ export default function PartnerDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-l-blue-600 hover:shadow-lg transition-shadow">
-            <div>
-              <p className="text-sm font-medium text-blue-900 mb-1">Active Offers</p>
-              <p className="text-4xl font-bold text-blue-600">{stats.activeOffers}</p>
-              <p className="text-xs text-blue-700 mt-2">Awaiting response</p>
-            </div>
-          </Card>
+        <MotionContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Active Offers</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.activeOffers}</p>
+                  <p className="text-xs text-blue-600 mt-1">Awaiting response</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-l-purple-600 hover:shadow-lg transition-shadow">
-            <div>
-              <p className="text-sm font-medium text-purple-900 mb-1">Total Leads</p>
-              <p className="text-4xl font-bold text-purple-600">{stats.totalLeads}</p>
-              <p className="text-xs text-purple-700 mt-2">Lifetime received</p>
-            </div>
-          </Card>
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Total Leads</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalLeads}</p>
+                  <p className="text-xs text-purple-600 mt-1">Lifetime received</p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-lg text-purple-600">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-l-green-600 hover:shadow-lg transition-shadow">
-            <div>
-              <p className="text-sm font-medium text-green-900 mb-1">Total Earnings</p>
-              <p className="text-4xl font-bold text-green-600">₹{stats.earnings.toLocaleString()}</p>
-              <p className="text-xs text-green-700 mt-2">From accepted offers</p>
-            </div>
-          </Card>
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Total Earnings</p>
+                  <p className="text-3xl font-bold text-gray-900">₹{stats.earnings.toLocaleString()}</p>
+                  <p className="text-xs text-green-600 mt-1">From accepted offers</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-lg text-green-600">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
 
-          <Card className={`bg-gradient-to-br ${stats.walletBalance < 1000 ? 'from-red-50 to-red-100 border-l-red-600' : 'from-emerald-50 to-emerald-100 border-l-emerald-600'} border-l-4 hover:shadow-lg transition-shadow`}>
-            <div>
-              <p className={`text-sm font-medium ${stats.walletBalance < 1000 ? 'text-red-900' : 'text-emerald-900'} mb-1`}>Wallet Balance</p>
-              <p className={`text-4xl font-bold ${stats.walletBalance < 1000 ? 'text-red-600' : 'text-emerald-600'}`}>₹{stats.walletBalance.toLocaleString()}</p>
-              {stats.walletBalance < 1000 && (
-                <p className="text-xs text-red-700 mt-2 font-semibold">Low balance - Recharge recommended</p>
-              )}
-            </div>
-          </Card>
-        </div>
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Wallet Balance</p>
+                  <p className={`text-3xl font-bold ${stats.walletBalance < 1000 ? 'text-red-600' : 'text-gray-900'}`}>₹{stats.walletBalance.toLocaleString()}</p>
+                  {stats.walletBalance < 1000 ? (
+                    <p className="text-xs text-red-600 mt-1 font-medium">Low Balance - Recharge!</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Available funds</p>
+                  )}
+                </div>
+                <div className={`p-3 rounded-lg ${stats.walletBalance < 1000 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
+        </MotionContainer>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card>
@@ -539,7 +593,7 @@ export default function PartnerDashboard() {
                 </Link>
               </div>
 
-              <div className="space-y-4 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              <MotionContainer className="space-y-4 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {quotes.length === 0 ? (
                   <EmptyState
                     icon="🚚"
@@ -550,7 +604,7 @@ export default function PartnerDashboard() {
                   />
                 ) : (
                   quotes.map((quote: any) => (
-                    <div key={quote.id} className="border-2 border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-lg transition-all bg-white">
+                    <MotionItem key={quote.id} className="border-2 border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-lg transition-all bg-white">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
@@ -599,10 +653,10 @@ export default function PartnerDashboard() {
                           </Button>
                         </Link>
                       </div>
-                    </div>
+                    </MotionItem>
                   ))
                 )}
-              </div>
+              </MotionContainer>
 
               {quotes.length > 3 && (
                 <div className="mt-6 text-center">
@@ -621,7 +675,7 @@ export default function PartnerDashboard() {
               <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
               <Badge variant="primary">{recentActivity.length} new</Badge>
             </div>
-            <div className="space-y-4 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <MotionContainer className="space-y-4 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
               {recentActivity.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 text-sm">
                   No recent activity found.
@@ -636,7 +690,7 @@ export default function PartnerDashboard() {
                     purple: 'bg-purple-100',
                   };
                   return (
-                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <MotionItem key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${colorClasses[activity.color] || 'bg-gray-100'}`}>
                         {activity.icon}
                       </div>
@@ -645,11 +699,11 @@ export default function PartnerDashboard() {
                         <p className="text-xs text-gray-600 mt-1">{activity.description}</p>
                         <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
                       </div>
-                    </div>
+                    </MotionItem>
                   );
                 })
               )}
-            </div>
+            </MotionContainer>
             <div className="mt-4">
               <Button variant="ghost" fullWidth size="sm">
                 View All Activity

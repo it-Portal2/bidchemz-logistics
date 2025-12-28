@@ -7,6 +7,8 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { MotionContainer, MotionItem } from '@/components/ui/Motion';
 
 interface Lead {
   id: string;
@@ -27,7 +29,7 @@ interface Lead {
 }
 
 export default function PartnerLeads() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,10 +39,11 @@ export default function PartnerLeads() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (token) {
       fetchLeads();
     }
-  }, [token, filter]);
+  }, [token, filter, authLoading]);
 
   const fetchLeads = async () => {
     try {
@@ -84,8 +87,8 @@ export default function PartnerLeads() {
   });
 
   const handleSubmitOffer = (quoteId: string) => {
-  router.push(`/partner/submit-offer?quoteId=${quoteId}`);
-};
+    router.push(`/partner/submit-offer?quoteId=${quoteId}`);
+  };
 
 
 
@@ -188,9 +191,9 @@ export default function PartnerLeads() {
           )}
         </div>
 
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        {loading || authLoading ? (
+          <div className="grid gap-4">
+            {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : filteredLeads.length === 0 ? (
           <Card>
@@ -208,87 +211,89 @@ export default function PartnerLeads() {
             </CardBody>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <MotionContainer className="grid gap-4">
             {filteredLeads.map((lead) => (
-              <Card key={lead.id} className="hover:shadow-md transition-shadow">
-                <CardBody>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <h3 className="text-xl font-semibold text-gray-900">
-                          {lead.cargoName}
-                        </h3>
-                        {lead.isHazardous && (
-                          <Badge variant="danger">
-                            ⚠️ Hazardous {lead.hazardClass}
+              <MotionItem key={lead.id}>
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardBody>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <h3 className="text-xl font-semibold text-gray-900">
+                            {lead.cargoName}
+                          </h3>
+                          {lead.isHazardous && (
+                            <Badge variant="danger">
+                              ⚠️ Hazardous {lead.hazardClass}
+                            </Badge>
+                          )}
+                          <Badge variant={lead.status === 'MATCHING' ? 'success' : 'neutral'}>
+                            {lead.status}
                           </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <p className="text-sm text-gray-500">Quote ID</p>
+                            <p className="font-medium text-gray-900">{lead.quoteNumber}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Quantity</p>
+                            <p className="font-medium text-gray-900">
+                              {lead.quantity} {lead.quantityUnit}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Packaging</p>
+                            <p className="font-medium text-gray-900">{lead.packagingType}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Ready Date</p>
+                            <p className="font-medium text-gray-900">
+                              {new Date(lead.cargoReadyDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <div className="flex items-center space-x-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{lead.pickupCity}, {lead.pickupState}</span>
+                          </div>
+                          <span>→</span>
+                          <div className="flex items-center space-x-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{lead.deliveryCity}, {lead.deliveryState}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end space-y-3">
+                        {lead.expiresAt && (
+                          <CountdownTimer expiresAt={lead.expiresAt} />
                         )}
-                        <Badge variant={lead.status === 'MATCHING' ? 'success' : 'neutral'}>
-                          {lead.status}
-                        </Badge>
-                      </div>
+                        <Button
+                          variant="primary"
+                          onClick={() => handleSubmitOffer(lead.id)}
+                          disabled={lead.status === 'EXPIRED'}
+                        >
+                          Submit Offer
+                        </Button>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-gray-500">Quote ID</p>
-                          <p className="font-medium text-gray-900">{lead.quoteNumber}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Quantity</p>
-                          <p className="font-medium text-gray-900">
-                            {lead.quantity} {lead.quantityUnit}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Packaging</p>
-                          <p className="font-medium text-gray-900">{lead.packagingType}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Ready Date</p>
-                          <p className="font-medium text-gray-900">
-                            {new Date(lead.cargoReadyDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <span>{lead.pickupCity}, {lead.pickupState}</span>
-                        </div>
-                        <span>→</span>
-                        <div className="flex items-center space-x-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <span>{lead.deliveryCity}, {lead.deliveryState}</span>
-                        </div>
                       </div>
                     </div>
-
-                    <div className="flex flex-col items-end space-y-3">
-                      {lead.expiresAt && (
-                        <CountdownTimer expiresAt={lead.expiresAt} />
-                      )}
-                      <Button
-                        variant="primary"
-                        onClick={() => handleSubmitOffer(lead.id)}
-                        disabled={lead.status === 'EXPIRED'}
-                      >
-                        Submit Offer
-                      </Button>
-
-
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
+                  </CardBody>
+                </Card>
+              </MotionItem>
             ))}
-          </div>
+          </MotionContainer>
         )}
       </div>
     </Layout>

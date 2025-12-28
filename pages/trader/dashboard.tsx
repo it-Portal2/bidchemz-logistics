@@ -5,12 +5,14 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
+import { SkeletonCard } from "@/components/ui/Skeleton";
+import { MotionContainer, MotionItem } from '@/components/ui/Motion';
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function TraderDashboard() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [quotes, setQuotes] = useState<any[]>([]);
   const [stats, setStats] = useState({
@@ -73,10 +75,41 @@ export default function TraderDashboard() {
   }, [token]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (token) {
       fetchQuotes();
     }
-  }, [token, fetchQuotes]);
+  }, [token, fetchQuotes, authLoading]);
+
+  if (loading || authLoading) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex justify-between">
+            <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
+            <div className="h-10 w-48 bg-gray-200 rounded animate-pulse" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <SkeletonCard />
+            </div>
+            <div>
+              <SkeletonCard />
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!user || user.role !== "TRADER") {
     return (
@@ -120,71 +153,127 @@ export default function TraderDashboard() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardBody className="text-center">
-              <p className="text-sm text-gray-600 mb-3">Active Quotes</p>
-              <p className="text-3xl font-bold text-blue-600">{stats.active}</p>
-              <p className="text-xs text-gray-500 mt-2">Awaiting offers</p>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody className="text-center">
-              <p className="text-sm text-gray-600 mb-3">With Offers</p>
-              <p className="text-3xl font-bold text-green-600">
-                {stats.withOffers}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Ready to select</p>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody className="text-center">
-              <p className="text-sm text-gray-600 mb-3">Completed</p>
-              <p className="text-3xl font-bold text-purple-600">
-                {stats.completedShipments}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Shipments</p>
-            </CardBody>
-          </Card>
-          <Link href="/trader/shipments">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow hover:ring-2 hover:ring-blue-500">
-              <CardBody className="text-center">
-                <p className="text-sm text-gray-600 mb-3">📦 My Shipments</p>
-                <p className="text-3xl font-bold text-indigo-600">
-                  {stats.completedShipments}
-                </p>
-                <p className="text-xs text-blue-500 mt-2 font-medium">
-                  Click to Track →
-                </p>
-              </CardBody>
+        <MotionContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Active Quotes</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.active}</p>
+                  <p className="text-xs text-blue-600 mt-1">Awaiting offers</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                </div>
+              </div>
             </Card>
-          </Link>
-        </div>
+          </MotionItem>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardBody className="text-center">
-              <p className="text-sm text-gray-600 mb-1">📈 Avg Quote Value</p>
-              <p className="text-2xl font-bold text-gray-900">
-                ₹{stats.avgQuoteValue.toFixed(0)}
-              </p>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody className="text-center">
-              <p className="text-sm text-gray-600 mb-1">💎 Lowest Rate</p>
-              <p className="text-2xl font-bold text-green-600">
-                ₹{stats.lowestRate.toFixed(0)}
-              </p>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody className="text-center">
-              <p className="text-sm text-gray-600 mb-1">📋 Total Quotes</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </CardBody>
-          </Card>
-        </div>
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">With Offers</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.withOffers}</p>
+                  <p className="text-xs text-green-600 mt-1">Ready to select</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-lg text-green-600">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
+
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Completed</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.completedShipments}</p>
+                  <p className="text-xs text-purple-600 mt-1">Shipments</p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-lg text-purple-600">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
+
+          <MotionItem>
+            <Link href="/trader/shipments">
+              <Card className="hover:shadow-lg transition-shadow border-indigo-200 cursor-pointer h-full group">
+                <div className="flex items-center justify-between h-full">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-1">My Shipments</p>
+                    <p className="text-3xl font-bold text-indigo-600">{stats.completedShipments}</p>
+                    <p className="text-xs text-indigo-600 mt-1 group-hover:underline">Track Now →</p>
+                  </div>
+                  <div className="p-3 bg-indigo-100 rounded-lg text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                    </svg>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          </MotionItem>
+        </MotionContainer>
+
+        <MotionContainer className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Avg Quote Value</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{stats.avgQuoteValue.toFixed(0)}</p>
+                </div>
+                <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
+
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Lowest Rate</p>
+                  <p className="text-2xl font-bold text-green-600">₹{stats.lowestRate.toFixed(0)}</p>
+                </div>
+                <div className="p-2 bg-green-50 rounded-lg text-green-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
+
+          <MotionItem>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Total Quotes</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                </div>
+                <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          </MotionItem>
+        </MotionContainer>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -193,11 +282,7 @@ export default function TraderDashboard() {
                 <CardTitle>Recent Freight Requests</CardTitle>
               </CardHeader>
               <CardBody className="p-0">
-                {loading ? (
-                  <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>
-                ) : quotes.length === 0 ? (
+                {quotes.length === 0 ? (
                   <EmptyState
                     icon="📋"
                     title="No Freight Requests Yet"
