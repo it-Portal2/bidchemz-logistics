@@ -27,6 +27,7 @@ export default function NewQuote() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFromBidChemz, setIsFromBidChemz] = useState(false);
+  const [hasBidId, setHasBidId] = useState(false);
 
   const [formData, setFormData] = useState({
     bidId: "",
@@ -34,7 +35,7 @@ export default function NewQuote() {
     cargoName: "",
     casNumber: "",
     quantity: "",
-    quantityUnit: "MT",
+    quantityUnit: "",
     isHazardous: false,
     hazardClass: "",
     unNumber: "",
@@ -147,8 +148,7 @@ export default function NewQuote() {
     if (!formData.quantity) newErrors.quantity = "Quantity is required";
     if (!formData.quantityUnit)
       newErrors.quantityUnit = "Quantity unit is required";
-    if (!formData.cargoReadyDate)
-      newErrors.cargoReadyDate = "Cargo ready date is required";
+
     if (!formData.pickupAddress)
       newErrors.pickupAddress = "Pickup address is required";
     if (!formData.pickupCity) newErrors.pickupCity = "Pickup city is required";
@@ -168,6 +168,11 @@ export default function NewQuote() {
       newErrors.packagingType = "Packaging type is required";
     if (formData.isHazardous && !formData.hazardClass) {
       newErrors.hazardClass = "Hazard class is required for hazardous cargo";
+    }
+
+    // Updated validation as per user request (Est. Delivery required, Cargo Ready optional)
+    if (!formData.estimatedDeliveryDate) {
+      newErrors.estimatedDeliveryDate = "Estimated delivery date is required";
     }
 
     setErrors(newErrors);
@@ -201,6 +206,11 @@ export default function NewQuote() {
         body: JSON.stringify({
           ...formData,
           quantity: parseFloat(formData.quantity),
+          // Append time to date strings to create valid ISO DateTime for Prisma
+          // Input type="date" returns YYYY-MM-DD
+          cargoReadyDate: formData.cargoReadyDate ? new Date(`${formData.cargoReadyDate}T00:00:00.000Z`).toISOString() : null,
+          estimatedDeliveryDate: new Date(`${formData.estimatedDeliveryDate}T00:00:00.000Z`).toISOString(),
+
           temperatureMin: formData.temperatureMin
             ? parseFloat(formData.temperatureMin)
             : null,
@@ -224,7 +234,7 @@ export default function NewQuote() {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create quote");
+        throw new Error(data.details || data.error || "Failed to create quote");
       }
 
       // Clear SSO bid data from localStorage after successful submission
@@ -265,21 +275,56 @@ export default function NewQuote() {
             title="1. Shipment Information"
             description="Basic details about your cargo"
           >
+            {/* Bid ID Toggle */}
+            <div className="mb-6 flex items-center space-x-4 bg-gray-50 p-3 rounded-lg border border-gray-100 w-fit">
+              <span className="text-sm font-medium text-gray-700">Do you have a Bid ID?</span>
+              <div className="flex items-center space-x-4">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    className="form-radio text-blue-600 h-4 w-4"
+                    checked={hasBidId}
+                    onChange={() => setHasBidId(true)}
+                    disabled={isFromBidChemz}
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Yes</span>
+                </label>
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    className="form-radio text-gray-600 h-4 w-4"
+                    checked={!hasBidId}
+                    onChange={() => {
+                      if (!isFromBidChemz) {
+                        setHasBidId(false);
+                        setFormData(prev => ({ ...prev, bidId: "" }));
+                      }
+                    }}
+                    disabled={isFromBidChemz}
+                  />
+                  <span className="ml-2 text-sm text-gray-700">No</span>
+                </label>
+              </div>
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
-              <FormField
-                label="Bid ID"
-                name="bidId"
-                value={formData.bidId}
-                onChange={handleChange}
-                error={errors.bidId}
-                placeholder="e.g., sell_bid_IoTho6gMTIU"
-                helperText={
-                  isFromBidChemz
-                    ? "Pre-filled from BidChemz (locked)"
-                    : "Required for BidChemz users"
-                }
-                disabled={isFromBidChemz}
-              />
+              {hasBidId && (
+                <FormField
+                  label="Bid ID"
+                  name="bidId"
+                  value={formData.bidId}
+                  onChange={handleChange}
+                  error={errors.bidId}
+                  placeholder="e.g., sell_bid_IoTho6gMTIU"
+                  helperText={
+                    isFromBidChemz
+                      ? "Pre-filled from BidChemz (locked)"
+                      : "Required if you selected Yes"
+                  }
+                  disabled={isFromBidChemz}
+                  required={hasBidId}
+                />
+              )}
               <FormField
                 label="Cargo Name"
                 name="cargoName"
@@ -317,10 +362,10 @@ export default function NewQuote() {
                 value={formData.quantityUnit}
                 onChange={handleChange}
                 options={[
-                  { label: "MT (Metric Ton)", value: "MT" },
                   { label: "Kg (Kilogram)", value: "Kg" },
+                  { label: "Ton", value: "Ton" },
+                  { label: "Metric Ton (MT)", value: "MT" },
                   { label: "Litre", value: "litre" },
-                  { label: "mg (Milligram)", value: "mg" },
                 ]}
                 required
               />
@@ -369,20 +414,21 @@ export default function NewQuote() {
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                label="Cargo Ready Date"
-                name="cargoReadyDate"
-                type="datetime-local"
-                value={formData.cargoReadyDate}
+                label="Estimated Delivery Date"
+                name="estimatedDeliveryDate"
+                type="date"
+                value={formData.estimatedDeliveryDate}
                 onChange={handleChange}
-                error={errors.cargoReadyDate}
+                error={errors.estimatedDeliveryDate}
                 required
               />
               <FormField
-                label="Estimated Delivery Date"
-                name="estimatedDeliveryDate"
-                type="datetime-local"
-                value={formData.estimatedDeliveryDate}
+                label="Cargo Ready Date"
+                name="cargoReadyDate"
+                type="date"
+                value={formData.cargoReadyDate}
                 onChange={handleChange}
+                error={errors.cargoReadyDate}
               />
             </div>
           </FormSection>
@@ -701,6 +747,6 @@ export default function NewQuote() {
           </div>
         </form>
       </div>
-    </Layout>
+    </Layout >
   );
 }

@@ -1,4 +1,13 @@
 import prisma from './prisma';
+import { NotificationPriority } from '@prisma/client';
+
+export type NotificationEventType =
+  | 'NEW_LEAD'
+  | 'LOW_BALANCE'
+  | 'QUOTE_DEADLINE'
+  | 'OFFER_STATUS'
+  | 'SHIPMENT_UPDATE'
+  | 'SYSTEM';
 
 export interface NotificationOptions {
   userId: string;
@@ -6,6 +15,7 @@ export interface NotificationOptions {
   message: string;
   type: 'EMAIL' | 'SMS' | 'WHATSAPP' | 'PORTAL';
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  eventType?: NotificationEventType;
   data?: any;
 }
 
@@ -15,13 +25,14 @@ export interface MultiChannelNotificationOptions {
   message: string;
   channels: ('EMAIL' | 'SMS' | 'WHATSAPP' | 'PORTAL')[];
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  eventType?: NotificationEventType;
   data?: any;
 }
 
 export async function sendMultiChannelNotification(
   options: MultiChannelNotificationOptions
 ): Promise<void> {
-  const { userId, title, message, channels, priority = 'MEDIUM', data } = options;
+  const { userId, title, message, channels, priority = 'MEDIUM', eventType = 'SYSTEM', data } = options;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -39,6 +50,7 @@ export async function sendMultiChannelNotification(
       message,
       type: channel,
       priority,
+      eventType,
       data,
     })
   );
@@ -49,7 +61,7 @@ export async function sendMultiChannelNotification(
 export async function sendNotification(
   options: NotificationOptions
 ): Promise<void> {
-  const { userId, title, message, type, priority = 'MEDIUM', data } = options;
+  const { userId, title, message, type, priority = 'MEDIUM', eventType = 'SYSTEM', data } = options;
 
   switch (type) {
     case 'EMAIL':
@@ -62,7 +74,7 @@ export async function sendNotification(
       await sendWhatsAppNotification(userId, message, data);
       break;
     case 'PORTAL':
-      await createPortalNotification(userId, title, message, priority, data);
+      await createPortalNotification(userId, title, message, priority, eventType, data);
       break;
   }
 
@@ -76,6 +88,7 @@ export async function sendNotification(
         type,
         title,
         priority,
+        eventType
       },
     },
   });
@@ -143,18 +156,49 @@ async function sendWhatsAppNotification(
   console.log(`[WHATSAPP] Data:`, data);
 }
 
+
+
 async function createPortalNotification(
   userId: string,
   title: string,
   message: string,
-  priority: string,
+  defaultPriority: string,
+  eventType: NotificationEventType,
   data?: any
 ): Promise<void> {
-  console.log(`[PORTAL] User: ${userId}`);
-  console.log(`[PORTAL] Title: ${title}`);
-  console.log(`[PORTAL] Message: ${message}`);
-  console.log(`[PORTAL] Priority: ${priority}`);
-  console.log(`[PORTAL] Data:`, data);
+  // Validate priority against the Enum
+  const validPriorities = Object.values(NotificationPriority) as string[];
+  let priority = validPriorities.includes(defaultPriority)
+    ? (defaultPriority as NotificationPriority)
+    : NotificationPriority.MEDIUM;
+
+  try {
+    // Fetch user preferences
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationPreferences: true }
+    });
+
+    if (user?.notificationPreferences) {
+      const prefs = user.notificationPreferences as Record<string, string>;
+      if (prefs[eventType] && validPriorities.includes(prefs[eventType])) {
+        priority = prefs[eventType] as NotificationPriority;
+      }
+    }
+
+    await prisma.notification.create({
+      data: {
+        userId,
+        title,
+        message,
+        priority,
+        type: eventType, // Store eventType in 'type' field
+      },
+    });
+  } catch (error) {
+    console.error('Failed to create portal notification:', error);
+    // Don't throw, just log to avoid breaking the flow if one channel fails
+  }
 }
 
 export async function notifyPartnerAboutNewLead(
@@ -185,6 +229,7 @@ export async function notifyPartnerAboutNewLead(
     message,
     channels: ['EMAIL', 'SMS', 'WHATSAPP', 'PORTAL'],
     priority: 'HIGH',
+    eventType: 'NEW_LEAD',
     data: {
       quoteId: quote.id,
       quoteNumber: quote.quoteNumber,
@@ -212,6 +257,7 @@ export async function notifyLowWalletBalance(
     message,
     channels: ['EMAIL', 'SMS', 'PORTAL'],
     priority: 'URGENT',
+    eventType: 'LOW_BALANCE',
     data: {
       currentBalance,
       threshold,
@@ -237,6 +283,7 @@ export async function notifyOfferExpiringSoon(
     message,
     channels: ['SMS', 'PORTAL'],
     priority: 'HIGH',
+    eventType: 'QUOTE_DEADLINE',
     data: {
       quoteId,
       expiresAt,

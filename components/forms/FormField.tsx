@@ -69,6 +69,13 @@ export function FormField({
       );
     }
 
+    const isDate = type === 'date' || type === 'datetime-local';
+    const DateIcon = (
+      <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    );
+
     return (
       <Input
         id={name}
@@ -78,10 +85,11 @@ export function FormField({
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
-        className={error ? 'border-red-500' : ''}
+        className={`${error ? 'border-red-500' : ''} ${isDate ? 'font-medium text-gray-900 bg-indigo-50/30' : ''}`}
         min={min}
         max={max}
         step={step}
+        icon={isDate ? DateIcon : undefined}
       />
     );
   };

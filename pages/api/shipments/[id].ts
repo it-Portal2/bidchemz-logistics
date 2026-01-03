@@ -163,14 +163,32 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       // 🔔 Notify Trader about shipment update
       if (status || currentLocation) {
         try {
-          await prisma.notification.create({
+          const { sendNotification } = await import("@/lib/notifications");
+
+          let notificationPriority = req.body.priority;
+
+          if (!notificationPriority) {
+            // Smart Priority Logic
+            if (["CANCELLED", "EXCEPTION", "RETURNED", "DELAYED", "ISSUE", "FAILED"].includes(status)) {
+              notificationPriority = "URGENT";
+            } else if (["DELIVERED", "OUT_FOR_DELIVERY", "PICKED_UP"].includes(status)) {
+              notificationPriority = "HIGH";
+            } else {
+              notificationPriority = "MEDIUM";
+            }
+          }
+
+          await sendNotification({
+            userId: updatedShipment.quote.traderId,
+            title: `Shipment Update: ${updatedShipment.shipmentNumber}`,
+            message: `Shipment updated to ${status || updatedShipment.status}${currentLocation ? ` at ${currentLocation}` : ""}.`,
+            type: "PORTAL",
+            priority: notificationPriority,
+            eventType: "SHIPMENT_UPDATE",
             data: {
-              userId: updatedShipment.quote.traderId,
-              title: `Shipment Update: ${updatedShipment.shipmentNumber}`,
-              message: `Shipment updated to ${status || updatedShipment.status}${currentLocation ? ` at ${currentLocation}` : ""}.`,
-              priority: "MEDIUM",
-              type: "SHIPMENT_UPDATE",
-            },
+              shipmentId: updatedShipment.id,
+              status: status || updatedShipment.status,
+            }
           });
         } catch (notificationError) {
           console.error("Error creating notification:", notificationError);

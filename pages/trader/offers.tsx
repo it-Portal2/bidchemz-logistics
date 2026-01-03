@@ -6,6 +6,7 @@ import Card, { CardHeader, CardBody, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { MotionContainer, MotionItem } from '@/components/ui/Motion';
 
 interface Offer {
   id: string;
@@ -258,97 +259,99 @@ export default function TraderOffers() {
             </CardBody>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <MotionContainer className="grid gap-4">
             {sortedOffers.map((offer, index) => (
-              <Card key={offer.id} className={`${index === 0 && !selectedOffer ? 'border-blue-500 border-2' : ''}`}>
-                <CardBody>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <h3 className="text-xl font-semibold text-gray-900">
-                          {offer.partner.companyName}
-                        </h3>
-                        {index === 0 && !selectedOffer && (
-                          <Badge variant="success">Best Value</Badge>
-                        )}
-                        {offer.status === 'ACCEPTED' && (
-                          <Badge variant="success">Selected</Badge>
-                        )}
+              <MotionItem key={offer.id}>
+                <Card className={`${index === 0 && !selectedOffer ? 'border-blue-500 border-2' : ''}`}>
+                  <CardBody>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <h3 className="text-xl font-semibold text-gray-900">
+                            {offer.partner.companyName}
+                          </h3>
+                          {index === 0 && !selectedOffer && (
+                            <Badge variant="success">Best Value</Badge>
+                          )}
+                          {offer.status === 'ACCEPTED' && (
+                            <Badge variant="success">Selected</Badge>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <p className="text-sm text-gray-500">Price</p>
+                            <p className="text-2xl font-bold text-blue-600">
+                              ₹{offer.price.toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Transit Time</p>
+                            <p className="text-lg font-semibold text-gray-900">
+                              {offer.transitDays} days
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Pickup From</p>
+                            <p className="font-medium text-gray-900">
+                              {new Date(offer.pickupAvailableFrom).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Valid Until</p>
+                            <p className="font-medium text-gray-900">
+                              {new Date(offer.offerValidUntil).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {offer.insuranceIncluded && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              ✓ Insurance
+                            </span>
+                          )}
+                          {offer.trackingIncluded && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              ✓ Tracking
+                            </span>
+                          )}
+                          {offer.customsClearance && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              ✓ Customs
+                            </span>
+                          )}
+                          {offer.valueAddedServices?.map((service, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                            >
+                              {service}
+                            </span>
+                          ))}
+                        </div>
+
+                        <p className="text-xs text-gray-500">
+                          Submitted: {new Date(offer.submittedAt).toLocaleString()}
+                        </p>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-gray-500">Price</p>
-                          <p className="text-2xl font-bold text-blue-600">
-                            ₹{offer.price.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Transit Time</p>
-                          <p className="text-lg font-semibold text-gray-900">
-                            {offer.transitDays} days
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Pickup From</p>
-                          <p className="font-medium text-gray-900">
-                            {new Date(offer.pickupAvailableFrom).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Valid Until</p>
-                          <p className="font-medium text-gray-900">
-                            {new Date(offer.offerValidUntil).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {offer.insuranceIncluded && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ Insurance
-                          </span>
-                        )}
-                        {offer.trackingIncluded && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            ✓ Tracking
-                          </span>
-                        )}
-                        {offer.customsClearance && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            ✓ Customs
-                          </span>
-                        )}
-                        {offer.valueAddedServices?.map((service, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                      <div className="ml-4">
+                        {!selectedOffer && offer.status === 'PENDING' && (
+                          <Button
+                            variant="primary"
+                            onClick={() => handleSelectOffer(offer.id)}
                           >
-                            {service}
-                          </span>
-                        ))}
+                            Select Offer
+                          </Button>
+                        )}
                       </div>
-
-                      <p className="text-xs text-gray-500">
-                        Submitted: {new Date(offer.submittedAt).toLocaleString()}
-                      </p>
                     </div>
-
-                    <div className="ml-4">
-                      {!selectedOffer && offer.status === 'PENDING' && (
-                        <Button
-                          variant="primary"
-                          onClick={() => handleSelectOffer(offer.id)}
-                        >
-                          Select Offer
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
+                  </CardBody>
+                </Card>
+              </MotionItem>
             ))}
-          </div>
+          </MotionContainer>
         )}
       </div>
     </Layout>

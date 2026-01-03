@@ -84,7 +84,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         !quoteData.cargoName ||
         !quoteData.quantity ||
         !quoteData.quantityUnit ||
-        !quoteData.cargoReadyDate ||
+        !quoteData.estimatedDeliveryDate || // Validate this NEW required field
         !quoteData.pickupAddress ||
         !quoteData.pickupCity ||
         !quoteData.pickupState ||
@@ -118,7 +118,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       const quote = await prisma.quote.create({
         data: {
           quoteNumber,
-          traderId: req.user!.userId,
+          trader: { connect: { id: req.user!.userId } },
           status: QuoteStatus.SUBMITTED,
           bidId: quoteData.bidId || null,
           counterpartyId: quoteData.counterpartyId || null,
@@ -129,10 +129,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           isHazardous: quoteData.isHazardous,
           hazardClass: quoteData.hazardClass || null,
           unNumber: quoteData.unNumber || null,
-          cargoReadyDate: new Date(quoteData.cargoReadyDate),
-          estimatedDeliveryDate: quoteData.estimatedDeliveryDate
-            ? new Date(quoteData.estimatedDeliveryDate)
+          cargoReadyDate: quoteData.cargoReadyDate
+            ? new Date(quoteData.cargoReadyDate)
             : null,
+          estimatedDeliveryDate: new Date(quoteData.estimatedDeliveryDate),
           pickupAddress: quoteData.pickupAddress,
           pickupCity: quoteData.pickupCity,
           pickupState: quoteData.pickupState,

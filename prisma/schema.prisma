@@ -43,6 +43,7 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
   notifications           Notification[]
+  notificationPreferences Json?
 
   @@index([email])
   @@index([role])
@@ -92,8 +93,8 @@ model Quote {
   isHazardous           Boolean
   hazardClass           HazardClass?
   unNumber              String?
-  cargoReadyDate        DateTime
-  estimatedDeliveryDate DateTime?
+  cargoReadyDate        DateTime?
+  estimatedDeliveryDate DateTime
   pickupAddress         String
   pickupCity            String
   pickupState           String

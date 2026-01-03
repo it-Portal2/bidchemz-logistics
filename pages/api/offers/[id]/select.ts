@@ -178,14 +178,19 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     // 🔔 Notify Partner about offer acceptance
     try {
-      await prisma.notification.create({
+      const { sendNotification } = await import("@/lib/notifications");
+      await sendNotification({
+        userId: offer.partnerId,
+        title: "Offer Accepted!",
+        message: `Congratulations! Your offer for quote #${offer.quote.quoteNumber} has been accepted. Shipment #${result.shipment.shipmentNumber} created.`,
+        priority: "URGENT",
+        type: "PORTAL",
+        eventType: "OFFER_STATUS",
         data: {
-          userId: offer.partnerId,
-          title: "Offer Accepted!",
-          message: `Congratulations! Your offer for quote #${offer.quote.quoteNumber} has been accepted. Shipment #${result.shipment.shipmentNumber} created.`,
-          priority: "URGENT",
-          type: "OFFER_ACCEPTED",
-        },
+          quoteId: offer.quoteId,
+          offerId: offer.id,
+          shipmentId: result.shipment.id
+        }
       });
     } catch (notificationError) {
       console.error("Error creating notification:", notificationError);

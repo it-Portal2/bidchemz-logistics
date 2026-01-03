@@ -18,7 +18,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const selectId = providedId || generatedId;
     const errorId = `${selectId}-error`;
     const hintId = `${selectId}-hint`;
-    
+
     return (
       <div className="w-full">
         {label && (
@@ -27,30 +27,37 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             {props.required && <span className="text-danger-500 ml-1">*</span>}
           </label>
         )}
-        <select
-          ref={ref}
-          id={selectId}
-          aria-invalid={error ? 'true' : 'false'}
-          aria-describedby={error ? errorId : hint ? hintId : undefined}
-          className={`
+        <div className="relative">
+          <select
+            ref={ref}
+            id={selectId}
+            aria-invalid={error ? 'true' : 'false'}
+            aria-describedby={error ? errorId : hint ? hintId : undefined}
+            className={`
             w-full px-4 py-2 border rounded-md transition-all duration-200
-            ${error 
-              ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-500' 
-              : 'border-secondary-300 focus:border-primary-500 focus:ring-primary-500'
-            }
+            ${error
+                ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-500'
+                : 'border-secondary-300 focus:border-primary-500 focus:ring-primary-500'
+              }
             focus:outline-none focus:ring-2 focus:ring-offset-0
             disabled:bg-secondary-50 disabled:cursor-not-allowed
-            appearance-none bg-white
+            appearance-none bg-white pr-10
             ${className}
           `}
-          {...props}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+            {...props}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
         {error && (
           <p id={errorId} className="mt-1 text-sm text-danger-600" role="alert">
             {error}

@@ -9,6 +9,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import Modal from "@/components/ui/Modal";
+import { MotionContainer, MotionItem } from "@/components/ui/Motion";
 
 type ShipmentStatus =
   | "BOOKED"
@@ -152,32 +153,40 @@ export default function TraderShipments() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <p className="text-sm text-blue-600 font-medium">Total Shipments</p>
-            <p className="text-2xl font-bold text-blue-700">
-              {shipments.length}
-            </p>
-          </Card>
-          <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-            <p className="text-sm text-yellow-600 font-medium">In Transit</p>
-            <p className="text-2xl font-bold text-yellow-700">
-              {shipments.filter((s) => s.status === "IN_TRANSIT").length}
-            </p>
-          </Card>
-          <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <p className="text-sm text-green-600 font-medium">Delivered</p>
-            <p className="text-2xl font-bold text-green-700">
-              {shipments.filter((s) => s.status === "DELIVERED").length}
-            </p>
-          </Card>
-          <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <p className="text-sm text-purple-600 font-medium">Booked</p>
-            <p className="text-2xl font-bold text-purple-700">
-              {shipments.filter((s) => s.status === "BOOKED").length}
-            </p>
-          </Card>
-        </div>
+        <MotionContainer className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MotionItem>
+            <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <p className="text-sm text-blue-600 font-medium">Total Shipments</p>
+              <p className="text-2xl font-bold text-blue-700">
+                {shipments.length}
+              </p>
+            </Card>
+          </MotionItem>
+          <MotionItem>
+            <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+              <p className="text-sm text-yellow-600 font-medium">In Transit</p>
+              <p className="text-2xl font-bold text-yellow-700">
+                {shipments.filter((s) => s.status === "IN_TRANSIT").length}
+              </p>
+            </Card>
+          </MotionItem>
+          <MotionItem>
+            <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <p className="text-sm text-green-600 font-medium">Delivered</p>
+              <p className="text-2xl font-bold text-green-700">
+                {shipments.filter((s) => s.status === "DELIVERED").length}
+              </p>
+            </Card>
+          </MotionItem>
+          <MotionItem>
+            <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <p className="text-sm text-purple-600 font-medium">Booked</p>
+              <p className="text-2xl font-bold text-purple-700">
+                {shipments.filter((s) => s.status === "BOOKED").length}
+              </p>
+            </Card>
+          </MotionItem>
+        </MotionContainer>
 
         {/* Shipments List */}
         {shipments.length === 0 ? (
@@ -194,87 +203,88 @@ export default function TraderShipments() {
             </Link>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <MotionContainer className="space-y-4">
             {shipments.map((shipment) => (
-              <Card
-                key={shipment.id}
-                className="p-6 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-bold text-gray-900">
-                        Shipment #{shipment.shipmentNumber}
-                      </h3>
-                      {getStatusBadge(shipment.status)}
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500">Cargo</p>
-                        <p className="font-medium">
-                          {shipment.quote?.cargoName}
-                        </p>
+              <MotionItem key={shipment.id}>
+                <Card
+                  className="p-6 hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3 className="text-lg font-bold text-gray-900">
+                          Shipment #{shipment.shipmentNumber}
+                        </h3>
+                        {getStatusBadge(shipment.status)}
                       </div>
-                      <div>
-                        <p className="text-gray-500">Route</p>
-                        <p className="font-medium">
-                          {shipment.quote?.pickupCity} →{" "}
-                          {shipment.quote?.deliveryCity}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Partner</p>
-                        <p className="font-medium">
-                          {shipment.offer?.partner?.companyName || "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Current Location</p>
-                        <p className="font-medium">
-                          {shipment.currentLocation || "Not updated"}
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* BidChemz Reference */}
-                    {shipment.quote?.bidId && (
-                      <div className="mt-3 text-xs text-gray-400">
-                        BidChemz Ref: {shipment.quote.bidId}
-                        {shipment.quote?.counterpartyId &&
-                          ` | Counterparty: ${shipment.quote.counterpartyId}`}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="ml-4 flex flex-col space-y-2 align-end">
-                    <Link href={`/trader/shipments/${shipment.id}`}>
-                      <Button variant="outline" size="sm">Track Shipment</Button>
-                    </Link>
-
-                    {shipment.status === 'DELIVERED' && !shipment.rating && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => openReviewModal(shipment.id)}
-                      >
-                        ★ Write Review
-                      </Button>
-                    )}
-
-                    {shipment.rating && (
-                      <div className="text-right">
-                        <div className="text-yellow-500 font-bold">
-                          {"★".repeat(shipment.rating)}{"☆".repeat(5 - shipment.rating)}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-500">Cargo</p>
+                          <p className="font-medium">
+                            {shipment.quote?.cargoName}
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-500">Reviewed</p>
+                        <div>
+                          <p className="text-gray-500">Route</p>
+                          <p className="font-medium">
+                            {shipment.quote?.pickupCity} →{" "}
+                            {shipment.quote?.deliveryCity}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Partner</p>
+                          <p className="font-medium">
+                            {shipment.offer?.partner?.companyName || "N/A"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Current Location</p>
+                          <p className="font-medium">
+                            {shipment.currentLocation || "Not updated"}
+                          </p>
+                        </div>
                       </div>
-                    )}
+
+                      {/* BidChemz Reference */}
+                      {shipment.quote?.bidId && (
+                        <div className="mt-3 text-xs text-gray-400">
+                          BidChemz Ref: {shipment.quote.bidId}
+                          {shipment.quote?.counterpartyId &&
+                            ` | Counterparty: ${shipment.quote.counterpartyId}`}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="ml-4 flex flex-col space-y-2 align-end">
+                      <Link href={`/trader/shipments/${shipment.id}`}>
+                        <Button variant="outline" size="sm">Track Shipment</Button>
+                      </Link>
+
+                      {shipment.status === 'DELIVERED' && !shipment.rating && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => openReviewModal(shipment.id)}
+                        >
+                          ★ Write Review
+                        </Button>
+                      )}
+
+                      {shipment.rating && (
+                        <div className="text-right">
+                          <div className="text-yellow-500 font-bold">
+                            {"★".repeat(shipment.rating)}{"☆".repeat(5 - shipment.rating)}
+                          </div>
+                          <p className="text-xs text-gray-500">Reviewed</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              </MotionItem>
             ))}
-          </div>
+          </MotionContainer>
         )}
 
         <Modal

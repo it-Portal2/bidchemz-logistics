@@ -339,17 +339,52 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         console.error("Error sending webhook:", webhookError);
       }
 
-      // 🔔 Notify Trader about new offer
+      // 🔔 Notify Trader about new offer with SMART PRIORITY
       try {
-        await prisma.notification.create({
-          data: {
-            userId: quote.traderId,
-            title: "New Offer Received",
-            message: `New offer of ₹${result.offer.price} from ${result.offer.partner.companyName || "Logistics Partner"
-              } for quote #${quote.quoteNumber}`,
-            priority: "HIGH",
-            type: "OFFER_RECEIVED",
+        const { sendNotification } = await import("@/lib/notifications");
+
+        // Fetch sibling offers to determine competitiveness
+        const otherOffers = await prisma.offer.findMany({
+          where: {
+            quoteId,
+            status: OfferStatus.PENDING,
+            id: { not: result.offer.id }, // Exclude current
           },
+          select: { price: true },
+        });
+
+        const lowestPrice = otherOffers.length > 0
+          ? Math.min(...otherOffers.map(o => o.price))
+          : Infinity;
+
+        let priority = "MEDIUM";
+        let title = "New Offer Received";
+        let message = `New offer of ₹${result.offer.price} from ${result.offer.partner.companyName || "Logistics Partner"} for quote #${quote.quoteNumber}`;
+
+        if (result.offer.price < lowestPrice) {
+          priority = "URGENT"; // It's the new best deal!
+          title = "New Lowest Offer!";
+          if (lowestPrice !== Infinity) {
+            message += ` (Beats previous best: ₹${lowestPrice})`;
+          }
+        } else if (result.offer.price <= lowestPrice * 1.10) {
+          priority = "HIGH"; // Within 10% of best price
+          title = "Competitive Offer";
+          message += ` (Close to best: ₹${lowestPrice})`;
+        }
+
+        await sendNotification({
+          userId: quote.traderId,
+          title: title,
+          message: message,
+          priority: priority as any,
+          type: "PORTAL",
+          eventType: "OFFER_STATUS",
+          data: {
+            quoteId,
+            offerId: result.offer.id,
+            price: result.offer.price
+          }
         });
       } catch (notificationError) {
         console.error("Error creating notification:", notificationError);
