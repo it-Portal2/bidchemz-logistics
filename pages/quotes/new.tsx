@@ -84,6 +84,7 @@ export default function NewQuote() {
 
       if (acceptedBid) {
         setIsFromBidChemz(true);
+        setHasBidId(true);
 
         // Map unit code to dropdown value
         const unitValue = UNIT_CODE_MAP[acceptedBid.weight_unit] || "MT";
