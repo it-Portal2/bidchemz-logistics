@@ -247,6 +247,16 @@ export default function TraderShipments() {
                       </div>
 
 
+
+                      {/* BidChemz Reference */}
+                      {shipment.quote?.bidId && (
+                        <div className="mt-3 text-xs text-gray-400">
+                          BidChemz Ref: {shipment.quote.bidId}
+                          {shipment.quote?.counterpartyId &&
+                            ` | Counterparty: ${shipment.quote.counterpartyId}`}
+                        </div>
+                      )}
+
                     </div>
 
                     <div className="ml-4 flex flex-col space-y-2 align-end">

@@ -141,6 +141,28 @@ export default function TraderShipmentDetail() {
 
 
 
+
+        {/* BidChemz Reference */}
+        {quote.bidId && (
+          <Card className="p-4 bg-purple-50 border-purple-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-600 font-medium">
+                  BidChemz Reference
+                </p>
+                <p className="text-lg font-bold text-purple-800">
+                  Bid ID: {quote.bidId}
+                </p>
+                {quote.counterpartyId && (
+                  <p className="text-sm text-purple-600">
+                    Counterparty: {quote.counterpartyId}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Status Timeline */}
         <Card className="p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -182,15 +204,15 @@ export default function TraderShipmentDetail() {
                     {i < 3 && (
                       <div
                         className={`flex-1 h-1 mx-2 ${isPast &&
-                            i <
-                            [
-                              "BOOKED",
-                              "PICKUP_SCHEDULED",
-                              "IN_TRANSIT",
-                              "DELIVERED",
-                            ].indexOf(shipment.status)
-                            ? "bg-green-500"
-                            : "bg-gray-200"
+                          i <
+                          [
+                            "BOOKED",
+                            "PICKUP_SCHEDULED",
+                            "IN_TRANSIT",
+                            "DELIVERED",
+                          ].indexOf(shipment.status)
+                          ? "bg-green-500"
+                          : "bg-gray-200"
                           }`}
                       />
                     )}
