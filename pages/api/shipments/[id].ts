@@ -121,14 +121,44 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             const bidChemzPayload = {
               bid_short_id: updatedShipment.quote.bidId,
               logistics_shipment_id: updatedShipment.id,
+              logistics_shipment_number: updatedShipment.shipmentNumber,
               status: status,
+              // Origin/Pickup Address (full details)
               origin_city: updatedShipment.quote.pickupCity,
+              origin_address: updatedShipment.quote.pickupAddress,
+              origin_state: updatedShipment.quote.pickupState,
+              origin_pincode: updatedShipment.quote.pickupPincode,
+              origin_contact_name: updatedShipment.quote.pickupContactName,
+              origin_contact_phone: updatedShipment.quote.pickupContactPhone,
+              // Destination/Delivery Address (full details)
               destination_city: updatedShipment.quote.deliveryCity,
+              destination_address: updatedShipment.quote.deliveryAddress,
+              destination_state: updatedShipment.quote.deliveryState,
+              destination_pincode: updatedShipment.quote.deliveryPincode,
+              destination_contact_name:
+                updatedShipment.quote.deliveryContactName,
+              destination_contact_phone:
+                updatedShipment.quote.deliveryContactPhone,
+              // Logistics partner details
+              logistics_partner: updatedShipment.offer?.partner
+                ? {
+                    id: updatedShipment.offer.partner.id,
+                    company_name: updatedShipment.offer.partner.companyName,
+                    email: updatedShipment.offer.partner.email,
+                  }
+                : null,
+              logistics_price: updatedShipment.offer?.price,
+              // Dates
               estimated_delivery: updatedShipment.estimatedDelivery,
+              booked_at: updatedShipment.createdAt,
+              actual_pickup_date: updatedShipment.actualPickupDate,
+              actual_delivery_date: updatedShipment.actualDeliveryDate,
+              // Tracking
               tracking_events: updatedShipment.trackingEvents,
-              tracking_url: `${process.env.NEXT_PUBLIC_APP_URL ||
+              tracking_url: `${
+                process.env.NEXT_PUBLIC_APP_URL ||
                 "https://logistics.bidchemz.com"
-                }/trader/shipments/${updatedShipment.id}`,
+              }/trader/shipments/${updatedShipment.id}`,
             };
 
             console.log(`[BidChemz Webhook] Sending to: ${bidChemzWebhookUrl}`);
@@ -169,9 +199,20 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
           if (!notificationPriority) {
             // Smart Priority Logic
-            if (["CANCELLED", "EXCEPTION", "RETURNED", "DELAYED", "ISSUE", "FAILED"].includes(status)) {
+            if (
+              [
+                "CANCELLED",
+                "EXCEPTION",
+                "RETURNED",
+                "DELAYED",
+                "ISSUE",
+                "FAILED",
+              ].includes(status)
+            ) {
               notificationPriority = "URGENT";
-            } else if (["DELIVERED", "OUT_FOR_DELIVERY", "PICKED_UP"].includes(status)) {
+            } else if (
+              ["DELIVERED", "OUT_FOR_DELIVERY", "PICKED_UP"].includes(status)
+            ) {
               notificationPriority = "HIGH";
             } else {
               notificationPriority = "MEDIUM";
@@ -181,14 +222,16 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           await sendNotification({
             userId: updatedShipment.quote.traderId,
             title: `Shipment Update: ${updatedShipment.shipmentNumber}`,
-            message: `Shipment updated to ${status || updatedShipment.status}${currentLocation ? ` at ${currentLocation}` : ""}.`,
+            message: `Shipment updated to ${status || updatedShipment.status}${
+              currentLocation ? ` at ${currentLocation}` : ""
+            }.`,
             type: "PORTAL",
             priority: notificationPriority,
             eventType: "SHIPMENT_UPDATE",
             data: {
               shipmentId: updatedShipment.id,
               status: status || updatedShipment.status,
-            }
+            },
           });
         } catch (notificationError) {
           console.error("Error creating notification:", notificationError);
