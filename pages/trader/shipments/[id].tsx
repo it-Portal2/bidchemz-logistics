@@ -139,32 +139,7 @@ export default function TraderShipmentDetail() {
           </div>
         </div>
 
-        {/* BidChemz Reference */}
-        {quote.bidId && (
-          <Card className="p-4 bg-purple-50 border-purple-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-purple-600 font-medium">
-                  BidChemz Reference
-                </p>
-                <p className="text-lg font-bold text-purple-800">
-                  Bid ID: {quote.bidId}
-                </p>
-                {quote.counterpartyId && (
-                  <p className="text-sm text-purple-600">
-                    Counterparty: {quote.counterpartyId}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="outline"
-                className="text-purple-600 border-purple-300"
-              >
-                View on BidChemz
-              </Button>
-            </div>
-          </Card>
-        )}
+
 
         {/* Status Timeline */}
         <Card className="p-6">
@@ -186,19 +161,17 @@ export default function TraderShipmentDetail() {
                 return (
                   <React.Fragment key={s}>
                     <div
-                      className={`flex flex-col items-center ${
-                        isPast ? "text-green-600" : "text-gray-400"
-                      }`}
+                      className={`flex flex-col items-center ${isPast ? "text-green-600" : "text-gray-400"
+                        }`}
                     >
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
-                      ${
-                        isActive
-                          ? "bg-blue-600 text-white ring-4 ring-blue-200"
-                          : isPast
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-200"
-                      }`}
+                      ${isActive
+                            ? "bg-blue-600 text-white ring-4 ring-blue-200"
+                            : isPast
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-200"
+                          }`}
                       >
                         {STATUS_CONFIG[s as ShipmentStatus]?.icon}
                       </div>
@@ -208,9 +181,8 @@ export default function TraderShipmentDetail() {
                     </div>
                     {i < 3 && (
                       <div
-                        className={`flex-1 h-1 mx-2 ${
-                          isPast &&
-                          i <
+                        className={`flex-1 h-1 mx-2 ${isPast &&
+                            i <
                             [
                               "BOOKED",
                               "PICKUP_SCHEDULED",
@@ -219,7 +191,7 @@ export default function TraderShipmentDetail() {
                             ].indexOf(shipment.status)
                             ? "bg-green-500"
                             : "bg-gray-200"
-                        }`}
+                          }`}
                       />
                     )}
                   </React.Fragment>
